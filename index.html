@@ -1,87 +1,24 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Volve Field Well Dashboard</title>
     <script src="https://plot.ly"></script>
     <script src="https://jsdelivr.net"></script>
-
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f4f4f4;
-        }
-
-        .top-navbar {
-            background-color: #002244;
-            padding: 10px 20px;
-            margin: -40px -40px 30px -40px;
-            display: flex;
-            gap: 10px;
-            border-bottom: 4px solid #0055a5;
-        }
-
-        .nav-tab {
-            color: #ffffff;
-            text-decoration: none;
-            padding: 10px 20px;
-            font-size: 15px;
-            font-weight: bold;
-            border-radius: 6px 6px 0 0;
-            background-color: #003366;
-            transition: background 0.2s ease-in-out;
-        }
-
-        .nav-tab:hover {
-            background-color: #0055a5;
-        }
-
-        .nav-tab.active {
-            background-color: #f4f4f4;
-            color: #003366;
-            border-bottom: 4px solid #f4f4f4;
-            margin-bottom: -14px;
-        }
-
-        h1 {
-            color: #003366;
-            margin-top: 10px;
-        }
-
-        select {
-            padding: 8px;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-
-        .dashboard {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .card {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            width: 220px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-        }
-
-        .card h3 {
-            margin-top: 0;
-        }
-
-        #prodPlot {
-            background: white;
-            border-radius: 8px;
-            padding: 10px;
-        }
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
+        .top-navbar { background-color: #002244; padding: 10px 20px; margin: -40px -40px 30px -40px; display: flex; gap: 10px; border-bottom: 4px solid #0055a5; }
+        .nav-tab { color: #ffffff; text-decoration: none; padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 6px 6px 0 0; background-color: #003366; transition: background 0.2s ease-in-out; }
+        .nav-tab:hover { background-color: #0055a5; }
+        .nav-tab.active { background-color: #f4f4f4; color: #003366; border-bottom: 4px solid #f4f4f4; margin-bottom: -14px; }
+        h1 { color: #003366; margin-top: 10px; }
+        select { padding: 8px; font-size: 14px; margin-bottom: 20px; }
+        .dashboard { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
+        .card { background: white; padding: 15px; border-radius: 8px; width: 220px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+        .card h3 { margin-top: 0; }
+        #prodPlot { background: white; border-radius: 8px; padding: 10px; }
     </style>
 </head>
-
 <body>
 
 <nav class="top-navbar">
@@ -91,51 +28,20 @@
 </nav>
 
 <h1>Volve Field Well Review</h1>
-
 <label><b>Select Well:</b></label>
 <select id="wellSelector"></select>
 
 <div class="dashboard">
-    <div class="card">
-        <h3>Well</h3>
-        <p id="wellName">Loading...</p>
-    </div>
-    <div class="card">
-        <h3>Peak Oil</h3>
-        <p id="peakOil">-</p>
-    </div>
-    <div class="card">
-        <h3>Peak Water</h3>
-        <p id="peakWater">-</p>
-    </div>
-    <div class="card">
-        <h3>Peak Gas</h3>
-        <p id="peakGas">-</p>
-    </div>
-    <div class="card">
-        <h3>Current Oil</h3>
-        <p id="currentOil">-</p>
-    </div>
-    <div class="card">
-        <h3>Current Water</h3>
-        <p id="currentWater">-</p>
-    </div>
-    <div class="card">
-        <h3>Current Gas</h3>
-        <p id="currentGas">-</p>
-    </div>
-    <div class="card">
-        <h3>Field Oil</h3>
-        <p id="fieldOil">-</p>
-    </div>
-    <div class="card">
-        <h3>Field Water</h3>
-        <p id="fieldWater">-</p>
-    </div>
-    <div class="card">
-        <h3>Field Gas</h3>
-        <p id="fieldGas">-</p>
-    </div>
+    <div class="card"><h3>Well</h3><p id="wellName">Loading...</p></div>
+    <div class="card"><h3>Peak Oil</h3><p id="peakOil">-</p></div>
+    <div class="card"><h3>Peak Water</h3><p id="peakWater">-</p></div>
+    <div class="card"><h3>Peak Gas</h3><p id="peakGas">-</p></div>
+    <div class="card"><h3>Current Oil</h3><p id="currentOil">-</p></div>
+    <div class="card"><h3>Current Water</h3><p id="currentWater">-</p></div>
+    <div class="card"><h3>Current Gas</h3><p id="currentGas">-</p></div>
+    <div class="card"><h3>Field Oil</h3><p id="fieldOil">-</p></div>
+    <div class="card"><h3>Field Water</h3><p id="fieldWater">-</p></div>
+    <div class="card"><h3>Field Gas</h3><p id="fieldGas">-</p></div>
 </div>
 
 <div id="prodPlot"></div>
@@ -143,7 +49,6 @@
 <script>
 const SM3_TO_BBL = 6.2898;
 const SM3_TO_SCF = 35.3147;
-
 let allRows = [];
 
 Papa.parse("volvedatacsv.csv", {
@@ -151,38 +56,27 @@ Papa.parse("volvedatacsv.csv", {
     header: true,
     complete: function(results) {
         allRows = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.DATEPRD);
-
         const wells = [...new Set(allRows.map(r => r.NPD_WELL_BORE_NAME))].sort();
+        
         const selector = document.getElementById("wellSelector");
         selector.innerHTML = "";
-
         wells.forEach(well => {
             const option = document.createElement("option");
-            option.value = well;
-            option.text = well;
-            selector.appendChild(option);
+            option.value = well; option.text = well; selector.appendChild(option);
         });
 
         calculateFieldKPIs();
-
-        selector.addEventListener("change", function() {
-            updateWell(this.value);
-        });
+        selector.addEventListener("change", function() { updateWell(this.value); });
 
         if (wells.length > 0) {
-            updateWell(wells[0]); // FIXED: Explicitly selecting index string 0 to fix selector loop crash
+            updateWell(wells[0]); // Explicitly targeting string at index 0
         }
     }
 });
 
 function calculateFieldKPIs() {
-    const sortedDates = allRows
-        .map(r => r.DATEPRD)
-        .filter(Boolean)
-        .sort();
-        
+    const sortedDates = allRows.map(r => r.DATEPRD).filter(Boolean).sort();
     if (sortedDates.length === 0) return;
-    
     const latestDate = sortedDates[sortedDates.length - 1];
     const latestRows = allRows.filter(r => r.DATEPRD === latestDate);
 
@@ -208,23 +102,20 @@ function updateWell(wellName) {
     document.getElementById("peakOil").innerText = Math.max(...oil).toFixed(0) + " BOPD";
     document.getElementById("peakWater").innerText = Math.max(...water).toFixed(0) + " BWPD";
     document.getElementById("peakGas").innerText = Math.max(...gas).toFixed(2) + " MMSCFD";
-    
     document.getElementById("currentOil").innerText = oil[oil.length - 1].toFixed(0) + " BOPD";
     document.getElementById("currentWater").innerText = water[water.length - 1].toFixed(0) + " BWPD";
     document.getElementById("currentGas").innerText = gas[gas.length - 1].toFixed(2) + " MMSCFD";
 
-    const oilTrace = { x: dates, y: oil, name: "Oil Rate (BOPD)", line: { color: "green" } };
-    const waterTrace = { x: dates, y: water, name: "Water Rate (BWPD)", line: { color: "blue" } };
-    const gasTrace = { x: dates, y: gas, name: "Gas Rate (MMSCFD)", yaxis: "y2", line: { color: "orange" } };
-
-    Plotly.newPlot("prodPlot", [oilTrace, waterTrace, gasTrace], {
-        title: wellName + " Production Overview",
-        hovermode: "x unified",
+    Plotly.newPlot("prodPlot", [
+        { x: dates, y: oil, name: "Oil (BOPD)", line: { color: "green" } },
+        { x: dates, y: water, name: "Water (BWPD)", line: { color: "blue" } },
+        { x: dates, y: gas, name: "Gas (MMSCFD)", yaxis: "y2", line: { color: "orange" } }
+    ], {
+        title: wellName + " Production Overview", hovermode: "x unified",
         yaxis: { title: "Liquid Rate (BOPD / BWPD)" },
         yaxis2: { title: "Gas Rate (MMSCFD)", overlaying: "y", side: "right" }
     });
 }
 </script>
 </body>
-
 </html>
