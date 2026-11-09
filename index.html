@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<html>
+
 <head>
     <title>Volve Well Review</title>
 
@@ -18,6 +21,7 @@
             display: flex;
             gap: 15px;
             margin-bottom: 30px;
+            flex-wrap: wrap;
         }
 
         .card {
@@ -28,11 +32,78 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.15);
         }
 
-        img {
-            max-width: 100%;
-            border: 1px solid #ddd;
-            margin-bottom: 30px;
+        #prodPlot {
+            background: white;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        select {
+            padding: 8px;
+            font-size: 14px;
         }
     </style>
 </head>
 
+<body>
+
+<h1>Volve Field Well Review</h1>
+
+<div style="margin-bottom:20px;">
+
+<label><b>Select Well:</b></label>
+
+<select id="wellSelector">
+    <option>15/9-F-1 C</option>
+    <option>15/9-F-11 B</option>
+</select>
+
+</div>
+
+<div class="dashboard">
+
+    <div class="card">
+        <h3>Well</h3>
+        <p id="wellName">15/9-F-1 C</p>
+    </div>
+
+    <div class="card">
+        <h3>Peak Oil</h3>
+        <p id="peakOil">6000 BOPD</p>
+    </div>
+
+    <div class="card">
+        <h3>Peak Water</h3>
+        <p id="peakWater">6200 BWPD</p>
+    </div>
+
+    <div class="card">
+        <h3>Peak Gas</h3>
+        <p id="peakGas">0.20 MMSCFD</p>
+    </div>
+
+</div>
+
+<h2>Production Overview</h2>
+
+<div id="prodPlot"></div>
+
+<script>
+
+const wellData = {
+
+"15/9-F-1 C":{
+
+peakOil:"6000 BOPD",
+peakWater:"6200 BWPD",
+peakGas:"0.20 MMSCFD",
+
+oil:[6000,5600,5200,4800],
+water:[100,300,600,1000],
+gas:[0.10,0.12,0.15,0.20]
+
+},
+
+"15/9-F-11 B":{
+
+peakOil:"4500 BOPD",
