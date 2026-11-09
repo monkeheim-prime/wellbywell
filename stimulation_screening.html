@@ -1,123 +1,28 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Volve Field Stimulation Screening</title>
     <script src="https://plot.ly"></script>
     <script src="https://jsdelivr.net"></script>
-
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f4f4f4;
-        }
-
-        .top-navbar {
-            background-color: #002244;
-            padding: 10px 20px;
-            margin: -40px -40px 30px -40px;
-            display: flex;
-            gap: 10px;
-            border-bottom: 4px solid #0055a5;
-        }
-
-        .nav-tab {
-            color: #ffffff;
-            text-decoration: none;
-            padding: 10px 20px;
-            font-size: 15px;
-            font-weight: bold;
-            border-radius: 6px 6px 0 0;
-            background-color: #003366;
-            transition: background 0.2s ease-in-out;
-        }
-
-        .nav-tab:hover {
-            background-color: #0055a5;
-        }
-
-        .nav-tab.active {
-            background-color: #f4f4f4;
-            color: #003366;
-            border-bottom: 4px solid #f4f4f4;
-            margin-bottom: -14px;
-        }
-
-        h1 {
-            color: #003366;
-            margin-top: 10px;
-        }
-
-        .content-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        #hiPlot {
-            width: 100%;
-            height: 500px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #003366;
-            color: white;
-        }
-
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-
-        .priority-high {
-            color: white;
-            background-color: #d9534f;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            text-align: center;
-            display: inline-block;
-        }
-
-        .priority-medium {
-            color: #333;
-            background-color: #f0ad4e;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            text-align: center;
-            display: inline-block;
-        }
-
-        .priority-low {
-            color: white;
-            background-color: #5cb85c;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            text-align: center;
-            display: inline-block;
-        }
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
+        .top-navbar { background-color: #002244; padding: 10px 20px; margin: -40px -40px 30px -40px; display: flex; gap: 10px; border-bottom: 4px solid #0055a5; }
+        .nav-tab { color: #ffffff; text-decoration: none; padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 6px 6px 0 0; background-color: #003366; transition: background 0.2s ease-in-out; }
+        .nav-tab:hover { background-color: #0055a5; }
+        .nav-tab.active { background-color: #f4f4f4; color: #003366; border-bottom: 4px solid #f4f4f4; margin-bottom: -14px; }
+        h1 { color: #003366; margin-top: 10px; }
+        .content-container { display: flex; flex-direction: column; gap: 20px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #hiPlot { width: 100%; height: 500px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #003366; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        .priority-high { color: white; background-color: #d9534f; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .priority-medium { color: #333; background-color: #f0ad4e; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .priority-low { color: white; background-color: #5cb85c; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
     </style>
 </head>
-
 <body>
 
 <nav class="top-navbar">
@@ -127,25 +32,15 @@
 </nav>
 
 <h1>Stimulation Screening & Heterogeneity Diagnostics</h1>
-
 <div class="content-container">
     <div id="hiPlot"></div>
-
-    <h2>Latest Period Candidate Ranking & Diagnostics</h2>
+    <h2>Field-Wide Candidate Ranking & Priorities</h2>
     <table>
         <thead>
-            <tr>
-                <th>Well Name</th>
-                <th>Oil HI</th>
-                <th>Water HI</th>
-                <th>Diagnostic Status</th>
-                <th>Priority Rank</th>
-            </tr>
+            <tr><th>Well Name</th><th>Oil HI</th><th>Water HI</th><th>Diagnostic Status</th><th>Priority Rank</th></tr>
         </thead>
         <tbody id="rankingTableBody">
-            <tr>
-                <td colspan="5">Loading production metrics data...</td>
-            </tr>
+            <tr><td colspan="5">Processing lifetime production data metrics...</td>
         </tbody>
     </table>
 </div>
@@ -155,135 +50,87 @@ Papa.parse("volvedatacsv.csv", {
     download: true,
     header: true,
     complete: function(results) {
-        const cleanRows = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.DATEPRD);
+        const cleanRows = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.NPD_WELL_BORE_NAME.trim() !== "");
         
-        if (cleanRows.length === 0) {
-            document.getElementById("rankingTableBody").innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error: No data records parsed.</td></tr>`;
-            return;
-        }
+        let wellMetrics = {};
+        let totalFieldOil = 0;
+        let totalFieldWater = 0;
 
-        const sortedTimeline = cleanRows.map(r => r.DATEPRD).filter(Boolean).sort();
-        const latestReportingDate = sortedTimeline[sortedTimeline.length - 1];
-        const latestPeriodRows = cleanRows.filter(r => r.DATEPRD === latestReportingDate);
-
-        let totalPeriodOil = 0;
-        let totalPeriodWater = 0;
-        let wellsSnapshotList = [];
-
-        latestPeriodRows.forEach(row => {
+        cleanRows.forEach(row => {
             const well = row.NPD_WELL_BORE_NAME.trim();
             const oVol = Number(row.BORE_OIL_VOL) || 0;
             const wVol = Number(row.BORE_WAT_VOL) || 0;
 
-            totalPeriodOil += oVol;
-            totalPeriodWater += wVol;
-
-            wellsSnapshotList.push({
-                name: well,
-                oil: oVol,
-                water: wVol
-            });
+            if (!wellMetrics[well]) { wellMetrics[well] = { cumOil: 0, cumWater: 0 }; }
+            wellMetrics[well].cumOil += oVol;
+            wellMetrics[well].cumWater += wVol;
         });
 
-        const activeWellsCount = wellsSnapshotList.length;
-        const avgFieldOil = activeWellsCount > 0 ? (totalPeriodOil / activeWellsCount) : 1;
-        const avgFieldWater = activeWellsCount > 0 ? (totalPeriodWater / activeWellsCount) : 1;
+        const wellNames = Object.keys(wellMetrics);
+        const activeCount = wellNames.length;
+        if (activeCount === 0) return;
 
-        let processedDiagnosticData = [];
+        wellNames.forEach(w => {
+            totalFieldOil += wellMetrics[w].cumOil;
+            totalFieldWater += wellMetrics[w].cumWater;
+        });
 
-        wellsSnapshotList.forEach(well => {
-            const oHI = avgFieldOil > 0 ? (well.oil / avgFieldOil) : 0;
-            const wHI = avgFieldWater > 0 ? (well.water / avgFieldWater) : 0;
+        const avgFieldOil = totalFieldOil / activeCount;
+        const avgFieldWater = totalFieldWater / activeCount;
+        let processedData = [];
+
+        wellNames.forEach(well => {
+            const oHI = avgFieldOil > 0 ? (wellMetrics[well].cumOil / avgFieldOil) : 0;
+            const wHI = avgFieldWater > 0 ? (wellMetrics[well].cumWater / avgFieldWater) : 0;
             
-            let status = "Good Performance";
-            let color = "green";
-            let priority = "Low";
-            let priorityClass = "priority-low";
+            let status = "Good Performance", color = "green", priority = "Low", pClass = "priority-low";
 
             if (oHI < 1.0 && wHI > 1.0) {
-                status = "Stimulation Candidate";
-                color = "red";
-                const performanceGap = wHI - oHI;
-                if (performanceGap > 1.0) {
-                    priority = "High";
-                    priorityClass = "priority-high";
-                } else {
-                    priority = "Medium";
-                    priorityClass = "priority-medium";
-                }
+                status = "Stimulation Candidate"; color = "red";
+                pClass = (wHI - oHI > 1.0) ? "priority-high" : "priority-medium";
+                priority = (wHI - oHI > 1.0) ? "High" : "Medium";
             } else if (wHI < 1.0 && oHI > 1.0) {
-                status = "Water Shut-Off Candidate";
-                color = "blue";
-                priority = "Low";
-                priorityClass = "priority-low";
+                status = "Water Shut-Off Candidate"; color = "blue";
             }
 
-            processedDiagnosticData.push({
-                name: well.name,
-                oilHI: oHI,
-                waterHI: wHI,
-                status: status,
-                color: color,
-                priority: priority,
-                priorityClass: priorityClass,
-                score: wHI - oHI
-            });
+            processedData.push({ name: well, oilHI: oHI, waterHI: wHI, status: status, color: color, priority: priority, priorityClass: pClass, score: wHI - oHI });
         });
 
-        processedDiagnosticData.sort((a, b) => b.score - a.score);
+        processedData.sort((a, b) => b.score - a.score);
 
-        renderPlotGrid(processedDiagnosticData, latestReportingDate);
-        renderTableRows(processedDiagnosticData);
+        // Build Table Elements
+        const tbody = document.getElementById("rankingTableBody");
+        tbody.innerHTML = "";
+        
+        let traces = {
+            red: { x: [], y: [], text: [], mode: 'markers', name: 'Stimulation Candidate', marker: { color: 'red', size: 14 } },
+            blue: { x: [], y: [], text: [], mode: 'markers', name: 'Water Shut-off Candidate', marker: { color: 'blue', size: 14 } },
+            green: { x: [], y: [], text: [], mode: 'markers', name: 'Good Performance', marker: { color: 'green', size: 14 } }
+        };
+
+        processedData.forEach(d => {
+            let row = document.createElement("tr");
+            row.innerHTML = `<td><b>${d.name}</b></td><td>${d.oilHI.toFixed(2)}</td><td>${d.waterHI.toFixed(2)}</td><td>${d.status}</td><td><span class="${d.priorityClass}">${d.priority}</span></td>`;
+            tbody.appendChild(row);
+
+            traces[d.color].x.push(d.oilHI);
+            traces[d.color].y.push(d.waterHI);
+            traces[d.color].text.push(d.name);
+        });
+
+        Plotly.newPlot('hiPlot', [traces.red, traces.blue, traces.green].filter(t => t.x.length > 0), {
+            title: 'Lifetime Cumulative Heterogeneity Index Diagnostics',
+            xaxis: { title: 'Oil Heterogeneity Index (Oil HI)', autorange: true }, // Fixed auto-range matrix layout
+            yaxis: { title: 'Water Heterogeneity Index (Water HI)', autorange: true }, // Fixed auto-range matrix layout
+            hovermode: 'closest',
+            shapes: [
+                { type: 'line', x0: 0, y0: 0, x1: 4, y1: 4, line: { color: 'gray', width: 1, dash: 'dash' } },
+                { type: 'line', x0: 1.0, y0: 0, x1: 1.0, y1: 4, line: { color: '#bbb', width: 1, dash: 'dot' } },
+                { type: 'line', x0: 0, y0: 1.0, x1: 4, y1: 1.0, line: { color: '#bbb', width: 1, dash: 'dot' } }
+            ]
+        });
     }
 });
-
-function renderPlotGrid(data, snapshotDateLabel) {
-    const traces = {
-        red: { x: [], y: [], text: [], mode: 'markers', name: 'Stimulation Candidate', marker: { color: 'red', size: 14, line: {color: 'white', width: 1} } },
-        blue: { x: [], y: [], text: [], mode: 'markers', name: 'Water Shut-off Candidate', marker: { color: 'blue', size: 14, line: {color: 'white', width: 1} } },
-        green: { x: [], y: [], text: [], mode: 'markers', name: 'Good Performance', marker: { color: 'green', size: 14, line: {color: 'white', width: 1} } }
-    };
-
-    data.forEach(d => {
-        traces[d.color].x.push(d.oilHI);
-        traces[d.color].y.push(d.waterHI);
-        traces[d.color].text.push(d.name);
-    });
-
-    const activeChartTraces = [traces.red, traces.blue, traces.green].filter(t => t.x.length > 0);
-
-    const layoutConfig = {
-        title: `Heterogeneity Index Crossplot (${snapshotDateLabel})`,
-        xaxis: { title: 'Oil Heterogeneity Index (Oil HI)', range: [0, 4] }, // FIXED: range limits set cleanly to avoid crashes
-        yaxis: { title: 'Water Heterogeneity Index (Water HI)', range: [0, 4] }, // FIXED: range limits set cleanly to avoid crashes
-        hovermode: 'closest',
-        shapes: [
-            { type: 'line', x0: 0, y0: 0, x1: 4, y1: 4, line: { color: 'gray', width: 1, dash: 'dash' } },
-            { type: 'line', x0: 1.0, y0: 0, x1: 1.0, y1: 4, line: { color: '#bbb', width: 1, dash: 'dot' } },
-            { type: 'line', x0: 0, y0: 1.0, x1: 4, y1: 1.0, line: { color: '#bbb', width: 1, dash: 'dot' } }
-        ]
-    };
-
-    Plotly.newPlot('hiPlot', activeChartTraces, layoutConfig);
-}
-
-function renderTableRows(data) {
-    const tbody = document.getElementById("rankingTableBody");
-    tbody.innerHTML = "";
-
-    data.forEach(d => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td><b>${d.name}</b></td>
-            <td>${d.oilHI.toFixed(2)}</td>
-            <td>${d.waterHI.toFixed(2)}</td>
-            <td>${d.status}</td>
-            <td><span class="${d.priorityClass}">${d.priority}</span></td>
-        `;
-        tbody.appendChild(row);
-    });
-}
 </script>
 </body>
-
 </html>
