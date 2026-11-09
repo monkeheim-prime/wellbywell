@@ -5,8 +5,8 @@
 
     <title>Volve Field Well Dashboard</title>
 
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://plot.ly"></script>
+    <script src="https://jsdelivr.net"></script>
 
     <style>
 
@@ -16,8 +16,41 @@
             background: #f4f4f4;
         }
 
+        /* Top Navigation Tabs Styling */
+        .top-navbar {
+            background-color: #002244;
+            padding: 10px 20px;
+            margin: -40px -40px 30px -40px; /* Counteracts body margins to span full width */
+            display: flex;
+            gap: 10px;
+            border-bottom: 4px solid #0055a5;
+        }
+
+        .nav-tab {
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px 6px 0 0;
+            background-color: #003366;
+            transition: background 0.2s ease-in-out;
+        }
+
+        .nav-tab:hover {
+            background-color: #0055a5;
+        }
+
+        .nav-tab.active {
+            background-color: #f4f4f4;
+            color: #003366;
+            border-bottom: 4px solid #f4f4f4;
+            margin-bottom: -14px; /* Blends cleanly into background */
+        }
+
         h1 {
             color: #003366;
+            margin-top: 10px;
         }
 
         select {
@@ -56,6 +89,13 @@
 </head>
 
 <body>
+
+<!-- Top Navigation Tabs -->
+<nav class="top-navbar">
+    <a href="index.html" class="nav-tab active">Well Review</a>
+    <a href="stimulation_screening.html" class="nav-tab">Stimulation Screening</a>
+    <a href="water_analysis.html" class="nav-tab">Water Analysis</a>
+</nav>
 
 <h1>Volve Field Well Review</h1>
 
