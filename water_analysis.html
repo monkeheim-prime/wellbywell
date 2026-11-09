@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <title>Volve Field Water Analysis</title>
 
+    <!-- Corrected CDN Libraries -->
     <script src="https://plot.ly"></script>
     <script src="https://jsdelivr.net"></script>
 
@@ -192,10 +193,16 @@ function updateWell(wellName){
     // Calculate Cumulative Water Production (Total bbls)
     const totalWater = water.reduce((sum, val) => sum + val, 0);
 
+    // Find Max Water safely (prevents stack overflow on huge datasets)
+    let maxWater = 0;
+    for (let i = 0; i < water.length; i++) {
+        if (water[i] > maxWater) maxWater = water[i];
+    }
+
     document.getElementById("wellName").innerText = wellName;
 
     document.getElementById("peakWater").innerText =
-        Math.max(...water).toFixed(0) + " BWPD";
+        maxWater.toFixed(0) + " BWPD";
 
     document.getElementById("currentWater").innerText =
         water[water.length - 1].toFixed(0) + " BWPD";
