@@ -3,3 +3,332 @@
     <a href="stimulation_screening.html" class="nav-tab active">Stimulation Screening</a>
     <a href="water_analysis.html" class="nav-tab">Water Analysis</a>
 </nav>
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Volve Field Stimulation Screening</title>
+    <script src="https://plot.ly"></script>
+    <script src="https://jsdelivr.net"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f4f4f4;
+        }
+
+        /* Top Navigation Tabs Styling */
+        .top-navbar {
+            background-color: #002244;
+            padding: 10px 20px;
+            margin: -40px -40px 30px -40px;
+            display: flex;
+            gap: 10px;
+            border-bottom: 4px solid #0055a5;
+        }
+
+        .nav-tab {
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px 6px 0 0;
+            background-color: #003366;
+            transition: background 0.2s ease-in-out;
+        }
+
+        .nav-tab:hover {
+            background-color: #0055a5;
+        }
+
+        .nav-tab.active {
+            background-color: #f4f4f4;
+            color: #003366;
+            border-bottom: 4px solid #f4f4f4;
+            margin-bottom: -14px;
+        }
+
+        h1 {
+            color: #003366;
+            margin-top: 10px;
+        }
+
+        .content-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Timeline Slider Controls Container */
+        .slider-control-panel {
+            background: #eef4fa;
+            padding: 15px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 10px;
+            border-left: 5px solid #003366;
+        }
+
+        .slider-control-panel input[type="range"] {
+            flex-grow: 1;
+            height: 8px;
+            cursor: pointer;
+        }
+
+        .slider-date-display {
+            font-size: 18px;
+            font-weight: bold;
+            color: #003366;
+            min-width: 140px;
+            text-align: center;
+        }
+
+        #hiPlot {
+            width: 100%;
+            height: 500px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #003366;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .priority-high {
+            color: white;
+            background-color: #d9534f;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .priority-medium {
+            color: #333;
+            background-color: #f0ad4e;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .priority-low {
+            color: white;
+            background-color: #5cb85c;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Top Navigation Tabs -->
+<nav class="top-navbar">
+    <a href="index.html" class="nav-tab">Well Review</a>
+    <a href="stimulation_screening.html" class="nav-tab active">Stimulation Screening</a>
+    <a href="water_analysis.html" class="nav-tab">Water Analysis</a>
+</nav>
+
+<h1>Stimulation Screening & Timeline Diagnostics</h1>
+
+<div class="content-container">
+
+    <!-- Interactive Time Slider Container -->
+    <div class="slider-control-panel">
+        <label style="font-weight:bold; color:#002244;">Timeline Step:</label>
+        <input type="range" id="timeSlider" min="0" max="0" value="0" step="1">
+        <span class="slider-date-display" id="dateDisplay">Loading...</span>
+    </div>
+
+    <div id="hiPlot"></div>
+
+    <h2>Candidate Ranking & Priorities for Selected Period</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Well Name</th>
+                <th>Oil HI</th>
+                <th>Water HI</th>
+                <th>Diagnostic Status</th>
+                <th>Priority Rank</th>
+            </tr>
+        </thead>
+        <tbody id="rankingTableBody">
+            <tr>
+                <td colspan="5">Loading data and initializing timeline...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+let rawDataset = [];
+let operationalTimeline = [];
+
+Papa.parse("volvedatacsv.csv", {
+    download: true,
+    header: true,
+    complete: function(results) {
+        rawDataset = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.DATEPRD);
+        operationalTimeline = [...new Set(rawDataset.map(r => r.DATEPRD))].filter(Boolean).sort();
+
+        if (operationalTimeline.length === 0) {
+            document.getElementById("dateDisplay").innerText = "No date column found";
+            return;
+        }
+
+        const slider = document.getElementById("timeSlider");
+        slider.max = operationalTimeline.length - 1;
+        slider.value = operationalTimeline.length - 1;
+
+        slider.addEventListener("input", function() {
+            processPeriodData(Number(this.value));
+        });
+
+        processPeriodData(operationalTimeline.length - 1);
+    }
+});
+
+function processPeriodData(timeIndex) {
+    const targetDate = operationalTimeline[timeIndex];
+    document.getElementById("dateDisplay").innerText = targetDate;
+
+    const periodRows = rawDataset.filter(r => r.DATEPRD === targetDate);
+
+    let totalPeriodOil = 0;
+    let totalPeriodWater = 0;
+    let activeWells = [];
+
+    periodRows.forEach(row => {
+        const well = row.NPD_WELL_BORE_NAME;
+        const oVol = Number(row.BORE_OIL_VOL) || 0;
+        const wVol = Number(row.BORE_WAT_VOL) || 0;
+
+        totalPeriodOil += oVol;
+        totalPeriodWater += wVol;
+
+        activeWells.push({
+            name: well,
+            oil: oVol,
+            water: wVol
+        });
+    });
+
+    const activeCount = activeWells.length;
+    const avgFieldOil = activeCount > 0 ? (totalPeriodOil / activeCount) : 1;
+    const avgFieldWater = activeCount > 0 ? (totalPeriodWater / activeCount) : 1;
+
+    let processedData = [];
+
+    activeWells.forEach(well => {
+        const oHI = avgFieldOil > 0 ? (well.oil / avgFieldOil) : 0;
+        const wHI = avgFieldWater > 0 ? (well.water / avgFieldWater) : 0;
+
+        let status = "Good Performance";
+        let color = "green";
+        let priority = "Low";
+        let priorityClass = "priority-low";
+
+        // UPDATED: Standardized around 1.0 (0 deviation baseline) 
+        // Stimulation Candidate: Oil index is below average field benchmark, Water index is above it
+        if (oHI < 1.0 && wHI > 1.0) {
+            status = "Stimulation Candidate";
+            color = "red";
+            const deficiency = wHI - oHI;
+            if (deficiency > 1.0) {
+                priority = "High";
+                priorityClass = "priority-high";
+            } else {
+                priority = "Medium";
+                priorityClass = "priority-medium";
+            }
+        } 
+        // Water Shut-Off Candidate: Water index is below field benchmark, Oil index is above it
+        else if (wHI < 1.0 && oHI > 1.0) {
+            status = "Water Shut-Off Candidate";
+            color = "blue";
+            priority = "Low";
+            priorityClass = "priority-low";
+        }
+
+        processedData.push({
+            name: well.name,
+            oilHI: oHI,
+            waterHI: wHI,
+            status: status,
+            color: color,
+            priority: priority,
+            priorityClass: priorityClass,
+            score: wHI - oHI
+        });
+    });
+
+    processedData.sort((a, b) => b.score - a.score);
+
+    renderPlot(processedData, targetDate);
+    renderTable(processedData);
+}
+
+function renderPlot(data, currentDateString) {
+    const traces = {
+        red: { x: [], y: [], text: [], mode: 'markers', name: 'Stimulation Candidate', marker: { color: 'red', size: 14, line: {color: 'white', width: 1} } },
+        blue: { x: [], y: [], text: [], mode: 'markers', name: 'Water Shut-off Candidate', marker: { color: 'blue', size: 14, line: {color: 'white', width: 1} } },
+        green: { x: [], y: [], text: [], mode: 'markers', name: 'Good Performance', marker: { color: 'green', size: 14, line: {color: 'white', width: 1} } }
+    };
+
+    data.forEach(d => {
+        traces[d.color].x.push(d.oilHI);
+        traces[d.color].y.push(d.waterHI);
+        traces[d.color].text.push(d.name);
+    });
+
+    const plotData = [traces.red, traces.blue, traces.green].filter(t => t.x.length > 0);
+
+    const layout = {
+        title: `Heterogeneity Index Crossplot (${currentDateString})`,
+        xaxis: { title: 'Oil Heterogeneity Index (Oil HI)', range: [0, 4] },
+        yaxis: { title: 'Water Heterogeneity Index (Water HI)', range: [0, 4] },
+        hovermode: 'closest',
+        shapes: [
+            { type: 'line', x0: 0, y0: 0, x1: 4, y1: 4, line: { color: 'gray', width: 1, dash: 'dash' } },
+            // Reference crosshair lines running directly through the 1.0 field average boundary
+            { type: 'line', x0: 1.0, y0: 0, x1: 1.0, y1: 4, line: { color: '#bbb', width: 1, dash: 'dot' } },
+            { type: 'line', x0: 0, y0: 1.0, x1: 4, y1: 1.0, line: { color: '#bbb', width: 1, dash: 'dot' } }
+        ]
+    };
+
+    Plotly.newPlot('hiPlot', plotData, layout);
+}
+
+function renderTable(data) {
+    const tbody = document.getElementById("rankingTableBody");
