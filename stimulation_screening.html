@@ -154,7 +154,8 @@ Papa.parse("volvedatacsv.csv", {
     download: true,
     header: true,
     complete: function(results) {
-        const validRows = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.BORE_OIL_VOL);
+        // FIXED: Only check if the well name exists so we don't accidentally ignore valid production rows
+        const validRows = results.data.filter(row => row.NPD_WELL_BORE_NAME);
         
         let wellMetrics = {};
         let totalFieldOil = 0;
@@ -185,8 +186,8 @@ Papa.parse("volvedatacsv.csv", {
 
         let processedData = [];
         wellNames.forEach(well => {
-            const oHI = wellMetrics[well].cumOil / avgFieldOil;
-            const wHI = wellMetrics[well].cumWater / avgFieldWater;
+            const oHI = avgFieldOil > 0 ? (wellMetrics[well].cumOil / avgFieldOil) : 0;
+            const wHI = avgFieldWater > 0 ? (wellMetrics[well].cumWater / avgFieldWater) : 0;
             
             let status = "Good Performance";
             let color = "green";
