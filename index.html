@@ -59,6 +59,33 @@
 
 <h1>Volve Field Well Review</h1>
 
+<div id="stimulationTab" style="display:none;">
+
+    <h2>Stimulation Screening</h2>
+
+    <label>
+        <b>Date:</b>
+    </label>
+
+    <input
+        type="range"
+        id="dateSlider"
+        min="0"
+        max="0"
+        value="0"
+        style="width:600px;"
+    >
+
+    <p id="selectedDate"></p>
+
+    <div id="hiPlot"></div>
+
+    <br>
+
+    <div id="rankingTable"></div>
+
+</div>
+    
 <label><b>Select Well:</b></label>
 
 <select id="wellSelector"></select>
@@ -413,29 +440,3 @@ function updateWell(wellName){
 </body>
 </html>
 
-<div id="stimulationTab" style="display:none;">
-
-    <h2>Stimulation Screening</h2>
-
-    <label>
-        <b>Date:</b>
-    </label>
-
-    <input
-        type="range"
-        id="dateSlider"
-        min="0"
-        max="0"
-        value="0"
-        style="width:600px;"
-    >
-
-    <p id="selectedDate"></p>
-
-    <div id="hiPlot"></div>
-
-    <br>
-
-    <div id="rankingTable"></div>
-
-</div>
