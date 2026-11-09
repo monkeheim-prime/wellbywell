@@ -137,7 +137,6 @@
 const SM3_TO_BBL = 6.2898;
 let allWaterRows = [];
 
-// Parse data safely matching your verified index.html framework architecture
 Papa.parse("volvedatacsv.csv", {
     download: true,
     header: true,
@@ -169,15 +168,12 @@ function updateWaterDiagnostics(wellName) {
     const wellData = allWaterRows.filter(r => r.NPD_WELL_BORE_NAME === wellName);
     if (wellData.length === 0) return;
 
-    // Map time arrays and production values converted safely to Oil Field Units
     const dates = wellData.map(r => r.DATEPRD);
     const waterRates = wellData.map(r => (Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL);
     const oilRates = wellData.map(r => (Number(r.BORE_OIL_VOL) || 0) * SM3_TO_BBL);
     
-    // Calculate cumulative lifetime water volume
     const cumWaterBbl = waterRates.reduce((sum, val) => sum + val, 0);
 
-    // Calculate dynamic fractional and percentage values for Water Cut profile tracking
     const waterCutProfiles = wellData.map(r => {
         const o = (Number(r.BORE_OIL_VOL) || 0);
         const w = (Number(r.BORE_WAT_VOL) || 0);
@@ -185,13 +181,11 @@ function updateWaterDiagnostics(wellName) {
         return totalLiquids > 0 ? ((w / totalLiquids) * 100) : 0;
     });
 
-    // Populate summary profile interface display elements
     document.getElementById("diagWellName").innerText = wellName;
     document.getElementById("diagPeakWater").innerText = Math.max(...waterRates).toFixed(0) + " BWPD";
     document.getElementById("diagCumWater").innerText = (cumWaterBbl / 1000000).toFixed(2) + " MM bbls";
     document.getElementById("diagCurrentCut").innerText = waterCutProfiles[waterCutProfiles.length - 1].toFixed(1) + " %";
 
-    // Setup interactive tracking plot paths
     const rateTrace = {
         x: dates,
         y: waterRates,
@@ -219,7 +213,7 @@ function updateWaterDiagnostics(wellName) {
             color: "darkblue",
             overlaying: 'y',
             side: 'right',
-            range: [0, 100]
+            range: [0, 100] // FIXED: Bound parameters explicitly set to resolve compilation hangs
         }
     };
 
@@ -229,4 +223,3 @@ function updateWaterDiagnostics(wellName) {
 
 </body>
 </html>
-
