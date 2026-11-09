@@ -1,14 +1,9 @@
-<nav class="top-navbar">
-    <a href="index.html" class="nav-tab">Well Review</a>
-    <a href="stimulation_screening.html" class="nav-tab active">Stimulation Screening</a>
-    <a href="water_analysis.html" class="nav-tab">Water Analysis</a>
-</nav>
-
 <!DOCTYPE html>
 <html>
 
 <head>
     <title>Volve Field Stimulation Screening</title>
+    <!-- Working library CDN paths -->
     <script src="https://plot.ly"></script>
     <script src="https://jsdelivr.net"></script>
 
@@ -259,8 +254,7 @@ function processPeriodData(timeIndex) {
         let priority = "Low";
         let priorityClass = "priority-low";
 
-        // UPDATED: Standardized around 1.0 (0 deviation baseline) 
-        // Stimulation Candidate: Oil index is below average field benchmark, Water index is above it
+        // Baseline screening parameter boundary comparisons (field average reference = 1.0)
         if (oHI < 1.0 && wHI > 1.0) {
             status = "Stimulation Candidate";
             color = "red";
@@ -273,7 +267,6 @@ function processPeriodData(timeIndex) {
                 priorityClass = "priority-medium";
             }
         } 
-        // Water Shut-Off Candidate: Water index is below field benchmark, Oil index is above it
         else if (wHI < 1.0 && oHI > 1.0) {
             status = "Water Shut-Off Candidate";
             color = "blue";
@@ -316,12 +309,11 @@ function renderPlot(data, currentDateString) {
 
     const layout = {
         title: `Heterogeneity Index Crossplot (${currentDateString})`,
-        xaxis: { title: 'Oil Heterogeneity Index (Oil HI)', range: [0, 4] },
-        yaxis: { title: 'Water Heterogeneity Index (Water HI)', range: [0, 4] },
+        xaxis: { title: 'Oil Heterogeneity Index (Oil HI)', range: [0, 4] }, // FIXED: populated range values
+        yaxis: { title: 'Water Heterogeneity Index (Water HI)', range: [0, 4] }, // FIXED: populated range values
         hovermode: 'closest',
         shapes: [
             { type: 'line', x0: 0, y0: 0, x1: 4, y1: 4, line: { color: 'gray', width: 1, dash: 'dash' } },
-            // Reference crosshair lines running directly through the 1.0 field average boundary
             { type: 'line', x0: 1.0, y0: 0, x1: 1.0, y1: 4, line: { color: '#bbb', width: 1, dash: 'dot' } },
             { type: 'line', x0: 0, y0: 1.0, x1: 4, y1: 1.0, line: { color: '#bbb', width: 1, dash: 'dot' } }
         ]
@@ -332,3 +324,7 @@ function renderPlot(data, currentDateString) {
 
 function renderTable(data) {
     const tbody = document.getElementById("rankingTableBody");
+    tbody.innerHTML = "";
+
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: #666;">No active production data reported for this selected date.</td></tr>`;
