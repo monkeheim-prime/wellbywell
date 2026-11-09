@@ -89,25 +89,25 @@
 
 <body>
 
-<h1>Stimulation Screening & Heterogeneity Diagnostics</h1>
+<h1 id="pageTitle">Stimulation Screening & Heterogeneity Diagnostics</h1>
 
 <div class="content-container">
     <div id="hiPlot"></div>
 
-    <h2>Field-Wide Candidate Ranking & Priorities</h2>
+    <h2>Latest Production Period Snapshot Ranking</h2>
     <table>
         <thead>
             <tr>
                 <th>Well Name</th>
-                <th>Oil HI</th>
-                <th>Water HI</th>
+                <th>Oil HI (Current)</th>
+                <th>Water HI (Current)</th>
                 <th>Diagnostic Status</th>
                 <th>Priority Rank</th>
             </tr>
         </thead>
         <tbody id="rankingTableBody">
             <tr>
-                <td colspan="5">Processing raw production database records...</td>
+                <td colspan="5">Processing current period snapshot production records...</td>
             </tr>
         </tbody>
     </table>
@@ -118,45 +118,60 @@ Papa.parse("volvedatacsv.csv", {
     download: true,
     header: true,
     complete: function(results) {
-        // Matches index.html logic exactly to prevent row parsing crashes
-        const cleanRows = results.data.filter(row => row.NPD_WELL_BORE_NAME);
+        // Safe filter matching the main page logic exactly
+        const cleanRows = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.DATEPRD);
         
-        let wellMetrics = {};
-        let totalFieldOil = 0;
-        let totalFieldWater = 0;
-
-        cleanRows.forEach(row => {
-            const well = row.NPD_WELL_BORE_NAME; // Removed .trim() which was crashing the file loop
-            const oVol = Number(row.BORE_OIL_VOL) || 0;
-            const wVol = Number(row.BORE_WAT_VOL) || 0;
-
-            if (!wellMetrics[well]) { 
-                wellMetrics[well] = { cumOil: 0, cumWater: 0 }; 
-            }
-            wellMetrics[well].cumOil += oVol;
-            wellMetrics[well].cumWater += wVol;
-        });
-
-        const wellNames = Object.keys(wellMetrics);
-        const activeCount = wellNames.length;
-        
-        if (activeCount === 0) {
+        if (cleanRows.length === 0) {
             document.getElementById("rankingTableBody").innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error: No data records found.</td></tr>`;
             return;
         }
 
-        wellNames.forEach(w => {
-            totalFieldOil += wellMetrics[w].cumOil;
-            totalFieldWater += wellMetrics[w].cumWater;
+        // Identify the exact latest reporting timestamp date
+        const sortedDates = cleanRows.map(r => r.DATEPRD).filter(Boolean).sort();
+        const latestDate = sortedDates[sortedDates.length - 1];
+        
+        // Update page header to transparently display what date is currently being used for calculations
+        document.getElementById("pageTitle").innerText = `Stimulation Screening & Diagnostics (${latestDate})`;
+
+        // Isolate entries belonging strictly to this latest production date snapshot
+        const latestRows = cleanRows.filter(r => r.DATEPRD === latestDate);
+
+        let totalPeriodOil = 0;
+        let totalPeriodWater = 0;
+        let wellsSnapshotList = [];
+
+        // Aggregate daily production parameters for the active well network
+        latestRows.forEach(row => {
+            const well = row.NPD_WELL_BORE_NAME;
+            const oVol = Number(row.BORE_OIL_VOL) || 0;
+            const wVol = Number(row.BORE_WAT_VOL) || 0;
+
+            totalPeriodOil += oVol;
+            totalPeriodWater += wVol;
+
+            wellsSnapshotList.push({
+                name: well,
+                oil: oVol,
+                water: wVol
+            });
         });
 
-        const avgFieldOil = totalFieldOil / activeCount;
-        const avgFieldWater = totalFieldWater / activeCount;
+        const activeCount = wellsSnapshotList.length;
+        
+        if (activeCount === 0) {
+            document.getElementById("rankingTableBody").innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error: No active wells on the latest date.</td></tr>`;
+            return;
+        }
+
+        // Compute current period average baselines across the asset field map
+        const avgFieldOil = totalPeriodOil / activeCount;
+        const avgFieldWater = totalPeriodWater / activeCount;
         let processedData = [];
 
-        wellNames.forEach(well => {
-            const oHI = avgFieldOil > 0 ? (wellMetrics[well].cumOil / avgFieldOil) : 0;
-            const wHI = avgFieldWater > 0 ? (wellMetrics[well].cumWater / avgFieldWater) : 0;
+        wellsSnapshotList.forEach(well => {
+            // HI = (Well Production on Date) / (Field Average Production on Date)
+            const oHI = avgFieldOil > 0 ? (well.oil / avgFieldOil) : 0;
+            const wHI = avgFieldWater > 0 ? (well.water / avgFieldWater) : 0;
             
             let status = "Good Performance", color = "green", priority = "Low", pClass = "priority-low";
 
@@ -171,7 +186,7 @@ Papa.parse("volvedatacsv.csv", {
             }
 
             processedData.push({ 
-                name: well, 
+                name: well.name, 
                 oilHI: oHI, 
                 waterHI: wHI, 
                 status: status, 
@@ -182,6 +197,7 @@ Papa.parse("volvedatacsv.csv", {
             });
         });
 
+        // Bubble top prioritization variances upward on display matrix tables
         processedData.sort((a, b) => b.score - a.score);
 
         const tbody = document.getElementById("rankingTableBody");
@@ -206,9 +222,9 @@ Papa.parse("volvedatacsv.csv", {
         const plotDataTraces = [traces.red, traces.blue, traces.green].filter(t => t.x.length > 0);
 
         Plotly.newPlot('hiPlot', plotDataTraces, {
-            title: 'Lifetime Cumulative Heterogeneity Index Diagnostics',
-            xaxis: { title: 'Oil Heterogeneity Index (Oil HI)', autorange: true }, 
-            yaxis: { title: 'Water Heterogeneity Index (Water HI)', autorange: true }, 
+            title: `Heterogeneity Index Crossplot (${latestDate})`,
+            xaxis: { title: 'Current Oil Heterogeneity Index (Oil HI)', autorange: true }, 
+            yaxis: { title: 'Current Water Heterogeneity Index (Water HI)', autorange: true }, 
             hovermode: 'closest',
             shapes: [
                 { type: 'line', x0: 0, y0: 0, x1: 4, y1: 4, line: { color: 'gray', width: 1, dash: 'dash' } },
