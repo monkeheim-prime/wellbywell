@@ -1,3 +1,26 @@
+<script>
+
+alert("Page Loaded");
+
+fetch("volvedatacsv.csv")
+.then(r => r.text())
+.then(data => {
+
+    alert("CSV FOUND");
+
+    console.log(data.substring(0,500));
+
+})
+.catch(err => {
+
+    alert("CSV ERROR");
+
+    console.log(err);
+
+});
+
+</script>
+
 <!DOCTYPE html>
 <html>
 <head>
