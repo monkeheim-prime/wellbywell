@@ -5,8 +5,8 @@
 
     <title>Volve Field Well Dashboard</title>
 
-    <script src="https://plot.ly"></script>
-    <script src="https://jsdelivr.net"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
     <style>
 
@@ -223,7 +223,7 @@ Papa.parse("volvedatacsv.csv", {
 
         if(wells.length > 0){
 
-            updateWell(wells[0]); // Fixed typo: closed the parenthesis correctly here
+            updateWell(wells[0]); // Verified array element execution here
 
         }
 
