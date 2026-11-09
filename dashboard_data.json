@@ -1,0 +1,94 @@
+import pandas as pd
+import json
+
+# 1. Load the raw data
+df = pd.read_csv("volvedatacsv.csv")
+
+# Clean up column names and remove empty well names
+df.columns = df.columns.str.strip()
+df = df.dropna(subset=["NPD_WELL_BORE_NAME"])
+df["DATEPRD"] = df["DATEPRD"].astype(str)
+
+# 2. Get the absolute latest reporting date
+latest_date = sorted(df["DATEPRD"].dropna().unique())[-1]
+latest_df = df[df["DATEPRD"] == latest_date]
+
+# 3. Calculate Field KPIs for the first tab
+SM3_TO_BBL = 6.2898
+SM3_TO_SCF = 35.3147
+
+field_oil = (latest_df["BORE_OIL_VOL"].fillna(0).sum()) * SM3_TO_BBL
+field_water = (latest_df["BORE_WAT_VOL"].fillna(0).sum()) * SM3_TO_BBL
+field_gas = (latest_df["BORE_GAS_VOL"].fillna(0).sum()) * SM3_TO_SCF / 1000000
+
+field_kpis = {
+    "latestDate": latest_date,
+    "fieldOil": f"{field_oil:,.0f} BOPD",
+    "fieldWater": f"{field_water:,.0f} BWPD",
+    "fieldGas": f"{field_gas:,.2f} MMSCFD"
+}
+
+# 4. Process all historical rows for individual well charts
+wells_historical = {}
+wells_list = sorted(df["NPD_WELL_BORE_NAME"].unique())
+
+for well in wells_list:
+    well_df = df[df["NPD_WELL_BORE_NAME"] == well].sort_values("DATEPRD")
+    dates = well_df["DATEPRD"].tolist()
+    oil = (well_df["BORE_OIL_VOL"].fillna(0) * SM3_TO_BBL).tolist()
+    water = (well_df["BORE_WAT_VOL"].fillna(0) * SM3_TO_BBL).tolist()
+    gas = (well_df["BORE_GAS_VOL"].fillna(0) * SM3_TO_SCF / 1000000).tolist()
+    
+    wells_historical[well] = {
+        "dates": dates,
+        "oil": oil,
+        "water": water,
+        "gas": gas,
+        "peakOil": f"{max(oil):,.0f} BOPD" if oil else "0 BOPD",
+        "peakWater": f"{max(water):,.0f} BWPD" if water else "0 BWPD",
+        "peakGas": f"{max(gas):,.2f} MMSCFD" if gas else "0 MMSCFD",
+        "currentOil": f"{oil[-1]:,.0f} BOPD" if oil else "0 BOPD",
+        "currentWater": f"{water[-1]:,.0f} BWPD" if water else "0 BWPD",
+        "currentGas": f"{gas[-1]:,.2f} MMSCFD" if gas else "0 MMSCFD",
+    }
+
+# 5. Process Stimulation Screening data (Latest Period Snapshot)
+wells_snapshot = []
+active_count = len(latest_df)
+avg_oil = latest_df["BORE_OIL_VOL"].fillna(0).mean() if active_count > 0 else 1
+avg_water = latest_df["BORE_WAT_VOL"].fillna(0).mean() if active_count > 0 else 1
+
+for _, row in latest_df.iterrows():
+    well_name = str(row["NPD_WELL_BORE_NAME"]).strip()
+    oil_vol = float(row["BORE_OIL_VOL"]) if pd.notna(row["BORE_OIL_VOL"]) else 0.0
+    wat_vol = float(row["BORE_WAT_VOL"]) if pd.notna(row["BORE_WAT_VOL"]) else 0.0
+    
+    oHI = oil_vol / avg_oil if avg_oil > 0 else 0
+    wHI = wat_vol / avg_water if avg_water > 0 else 0
+    
+    status, color, priority, p_class = "Good Performance", "green", "Low", "priority-low"
+    if oHI < 1.0 and wHI > 1.0:
+        status, color = "Stimulation Candidate", "red"
+        priority, p_class = ("High", "priority-high") if (wHI - oHI) > 1.0 else ("Medium", "priority-medium")
+    elif wHI < 1.0 and oHI > 1.0:
+        status, color = "Water Shut-Off Candidate", "blue"
+        
+    wells_snapshot.append({
+        "name": well_name, "oilHI": oHI, "waterHI": wHI,
+        "status": status, "color": color, "priority": priority, "priorityClass": p_class, "score": wHI - oHI
+    })
+
+wells_snapshot = sorted(wells_snapshot, key=lambda x: x["score"], reverse=True)
+
+# Save everything into one structured JSON master file
+output_data = {
+    "fieldKPIs": field_kpis,
+    "wellsList": wells_list,
+    "wellsHistorical": wells_historical,
+    "screeningSnapshot": wells_snapshot
+}
+
+with open("dashboard_data.json", "w") as f:
+    json.dump(output_data, f, indent=4)
+
+print("Successfully generated dashboard_data.json!")
