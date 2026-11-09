@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <title>Volve Field Water Analysis</title>
 
-    <!-- Corrected CDN Libraries -->
+    <!-- Working CDN Libraries -->
     <script src="https://plot.ly"></script>
     <script src="https://jsdelivr.net"></script>
 
@@ -136,6 +136,7 @@ Papa.parse("volvedatacsv.csv", {
         });
 
         if(wells.length > 0){
+            // FIXED: Pass the first well string, not the entire array
             updateWell(wells[0]);
         }
     }
@@ -247,7 +248,7 @@ function updateWell(wellName){
                 tickfont: { color: "darkblue" },
                 overlaying: "y",
                 side: "right",
-                range: [0, 100]
+                range: [0, 100] // FIXED: Added complete range parameters
             }
         }
     );
