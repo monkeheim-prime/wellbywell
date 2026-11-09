@@ -3,8 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Volve Field Water Analysis Dashboard</title>
-    <!-- Stable CDN Paths for Graphing and Parsing Libraries -->
+    <title>Volve Field Water Analysis</title>
+
     <script src="https://plot.ly"></script>
     <script src="https://jsdelivr.net"></script>
 
@@ -13,38 +13,6 @@
             font-family: Arial, sans-serif;
             margin: 40px;
             background: #f4f4f4;
-        }
-
-        /* Top Navigation Tabs Styling matching your theme colors */
-        .top-navbar {
-            background-color: #002244;
-            padding: 10px 20px;
-            margin: -40px -40px 30px -40px;
-            display: flex;
-            gap: 10px;
-            border-bottom: 4px solid #0055a5;
-        }
-
-        .nav-tab {
-            color: #ffffff;
-            text-decoration: none;
-            padding: 10px 20px;
-            font-size: 15px;
-            font-weight: bold;
-            border-radius: 6px 6px 0 0;
-            background-color: #003366;
-            transition: background 0.2s ease-in-out;
-        }
-
-        .nav-tab:hover {
-            background-color: #0055a5;
-        }
-
-        .nav-tab.active {
-            background-color: #f4f4f4;
-            color: #003366;
-            border-bottom: 4px solid #f4f4f4;
-            margin-bottom: -14px;
         }
 
         h1 {
@@ -56,8 +24,6 @@
             padding: 8px;
             font-size: 14px;
             margin-bottom: 20px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
         }
 
         .dashboard {
@@ -78,73 +44,81 @@
         .card h3 {
             margin-top: 0;
             color: #003366;
-            font-size: 16px;
         }
 
-        .card p {
-            font-size: 18px;
-            font-weight: bold;
-            margin: 10px 0 0 0;
-        }
-
-        #waterPlot {
+        #prodPlot {
             background: white;
             border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 10px;
         }
     </style>
 </head>
 
 <body>
 
-<!-- Top Navigation Tabs -->
-<nav class="top-navbar">
-    <a href="index.html" class="nav-tab">Well Review</a>
-    <a href="stimulation_screening.html" class="nav-tab">Stimulation Screening</a>
-    <a href="water_analysis.html" class="nav-tab active">Water Analysis</a>
-</nav>
+<h1>Volve Field Water Analysis</h1>
 
-<h1>Water Diagnostic & Profiling</h1>
-
-<label><b>Select Well for Diagnostics:</b></label>
-<select id="waterWellSelector">
-    <option>Loading asset network...</option>
-</select>
+<label><b>Select Well:</b></label>
+<select id="wellSelector"></select>
 
 <div class="dashboard">
+
     <div class="card">
-        <h3>Selected Well</h3>
-        <p id="diagWellName">-</p>
+        <h3>Well</h3>
+        <p id="wellName">Loading...</p>
     </div>
+
     <div class="card">
-        <h3>Peak Water Rate</h3>
-        <p id="diagPeakWater">-</p>
+        <h3>Peak Water</h3>
+        <p id="peakWater">-</p>
     </div>
+
+    <div class="card">
+        <h3>Current Water</h3>
+        <p id="currentWater">-</p>
+    </div>
+
     <div class="card">
         <h3>Cumulative Water</h3>
-        <p id="diagCumWater">-</p>
+        <p id="cumWater">-</p>
     </div>
+
     <div class="card">
         <h3>Current Water Cut</h3>
-        <p id="diagCurrentCut">-</p>
+        <p id="currentWaterCut">-</p>
     </div>
+
+    <div class="card">
+        <h3>Field Water</h3>
+        <p id="fieldWater">-</p>
+    </div>
+
 </div>
 
-<div id="waterPlot"></div>
+<div id="prodPlot"></div>
 
 <script>
 const SM3_TO_BBL = 6.2898;
-let allWaterRows = [];
+
+let allRows = [];
 
 Papa.parse("volvedatacsv.csv", {
     download: true,
     header: true,
     complete: function(results) {
-        allWaterRows = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.DATEPRD);
+        allRows = results.data.filter(
+            row => row.NPD_WELL_BORE_NAME && row.DATEPRD
+        );
 
-        const wells = [...new Set(allWaterRows.map(r => r.NPD_WELL_BORE_NAME))].sort();
-        const selector = document.getElementById("waterWellSelector");
+        const wells = [
+            ...new Set(
+                allRows.map(
+                    r => r.NPD_WELL_BORE_NAME
+                )
+            )
+        ].sort();
+
+        const selector = document.getElementById("wellSelector");
         selector.innerHTML = "";
 
         wells.forEach(well => {
@@ -154,69 +128,122 @@ Papa.parse("volvedatacsv.csv", {
             selector.appendChild(option);
         });
 
+        calculateFieldKPIs();
+
         selector.addEventListener("change", function() {
-            updateWaterDiagnostics(this.value);
+            updateWell(this.value);
         });
 
-        if (wells.length > 0) {
-            updateWaterDiagnostics(wells[0]); // Safe array element tracking
+        if(wells.length > 0){
+            updateWell(wells[0]);
         }
     }
 });
 
-function updateWaterDiagnostics(wellName) {
-    const wellData = allWaterRows.filter(r => r.NPD_WELL_BORE_NAME === wellName);
-    if (wellData.length === 0) return;
+function calculateFieldKPIs(){
+    const sortedDates = allRows
+        .map(r => r.DATEPRD)
+        .filter(Boolean)
+        .sort();
+
+    if (sortedDates.length === 0) return;
+
+    const latestDate = sortedDates[sortedDates.length - 1];
+
+    const latestRows = allRows.filter(
+        r => r.DATEPRD === latestDate
+    );
+
+    const fieldWater = latestRows.reduce(
+        (sum, r) => sum + ((Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL),
+        0
+    );
+
+    document.getElementById("fieldWater").innerText =
+        fieldWater.toFixed(0) + " BWPD";
+}
+
+function updateWell(wellName){
+    const wellData = allRows.filter(
+        r => r.NPD_WELL_BORE_NAME === wellName
+    );
+
+    if(wellData.length === 0){
+        return;
+    }
 
     const dates = wellData.map(r => r.DATEPRD);
-    const waterRates = wellData.map(r => (Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL);
     
-    const cumWaterBbl = waterRates.reduce((sum, val) => sum + val, 0);
+    const water = wellData.map(
+        r => (Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL
+    );
 
-    const waterCutProfiles = wellData.map(r => {
-        const o = (Number(r.BORE_OIL_VOL) || 0);
+    const oil = wellData.map(
+        r => (Number(r.BORE_OIL_VOL) || 0) * SM3_TO_BBL
+    );
+
+    // Calculate Water Cut (%) -> Water / (Oil + Water)
+    const waterCut = wellData.map(r => {
         const w = (Number(r.BORE_WAT_VOL) || 0);
-        const totalLiquids = o + w;
-        return totalLiquids > 0 ? ((w / totalLiquids) * 100) : 0;
+        const o = (Number(r.BORE_OIL_VOL) || 0);
+        return (o + w) > 0 ? (w / (o + w)) * 100 : 0;
     });
 
-    document.getElementById("diagWellName").innerText = wellName;
-    document.getElementById("diagPeakWater").innerText = Math.max(...waterRates).toFixed(0) + " BWPD";
-    document.getElementById("diagCumWater").innerText = (cumWaterBbl / 1000000).toFixed(2) + " MM bbls";
-    document.getElementById("diagCurrentCut").innerText = waterCutProfiles[waterCutProfiles.length - 1].toFixed(1) + " %";
+    // Calculate Cumulative Water Production (Total bbls)
+    const totalWater = water.reduce((sum, val) => sum + val, 0);
 
-    const rateTrace = {
+    document.getElementById("wellName").innerText = wellName;
+
+    document.getElementById("peakWater").innerText =
+        Math.max(...water).toFixed(0) + " BWPD";
+
+    document.getElementById("currentWater").innerText =
+        water[water.length - 1].toFixed(0) + " BWPD";
+
+    document.getElementById("cumWater").innerText =
+        (totalWater / 1000000).toFixed(2) + " MM bbls";
+
+    document.getElementById("currentWaterCut").innerText =
+        waterCut[waterCut.length - 1].toFixed(1) + " %";
+
+    const waterRateTrace = {
         x: dates,
-        y: waterRates,
+        y: water,
         name: "Water Rate (BWPD)",
         type: 'scatter',
         line: { color: "blue", width: 2 }
     };
 
-    const cutTrace = {
+    const waterCutTrace = {
         x: dates,
-        y: waterCutProfiles,
+        y: waterCut,
         name: "Water Cut (%)",
         type: 'scatter',
-        yaxis: 'y2',
+        yaxis: "y2",
         line: { color: "lightblue", width: 2, dash: "dash" }
     };
 
-    const layout = {
-        title: `${wellName} Water Production & Cut Diagnostic Log Profile`,
-        hovermode: "x unified",
-        xaxis: { title: "Reporting Date Timeline Log" },
-        yaxis: { title: "Water Production Volumetric Rate (BWPD)", color: "blue" },
-        yaxis2: {
-            title: "Calculated Water Cut State Fraction (%)",
-            color: "darkblue",
-            overlaying: 'y',
-            side: 'right',
-            range: [0, 100] // FIXED: Bound range limits populated explicitly to prevent token errors
+    Plotly.newPlot(
+        "prodPlot",
+        [waterRateTrace, waterCutTrace],
+        {
+            title: wellName + " Water Production Diagnostics",
+            hovermode: "x unified",
+            yaxis: {
+                title: "Water Production Rate (BWPD)",
+                titlefont: { color: "blue" },
+                tickfont: { color: "blue" }
+            },
+            yaxis2: {
+                title: "Water Cut (%)",
+                titlefont: { color: "darkblue" },
+                tickfont: { color: "darkblue" },
+                overlaying: "y",
+                side: "right",
+                range: [0, 100]
+            }
         }
-    };
-
-    Plotly.newPlot("waterPlot", [rateTrace, cutTrace], layout);
+    );
 }
 </script>
 
