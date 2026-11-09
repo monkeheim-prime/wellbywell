@@ -1,194 +1,184 @@
-<!DOCTYPE html>
-<html>
 <head>
     <title>Volve Well Review</title>
 
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f4f4f4;
-        }
-
-        h1 {
-            color: #003366;
-        }
-
-        .dashboard {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .card {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            width: 180px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-        }
-
-        #prodPlot {
-            background: white;
-            border-radius: 10px;
-            min-height: 500px;
-            padding: 10px;
-        }
-
-        select {
-            padding: 8px;
-            margin-bottom: 20px;
-        }
+        ...
     </style>
 </head>
 
-<body>
-
-<h1>Volve Field Well Review</h1>
-
-<label><b>Select Well:</b></label>
-
-<select id="wellSelector">
-</select>
-
-<div class="dashboard">
-
-    <div class="card">
-        <h3>Well</h3>
-        <p id="wellName">15/9-F-1 C</p>
-    </div>
-
-    <div class="card">
-        <h3>Peak Oil</h3>
-        <p id="peakOil">6000 BOPD</p>
-    </div>
-
-    <div class="card">
-        <h3>Peak Water</h3>
-        <p id="peakWater">6200 BWPD</p>
-    </div>
-
-    <div class="card">
-        <h3>Peak Gas</h3>
-        <p id="peakGas">0.20 MMSCFD</p>
-    </div>
-
-</div>
-
-<h2>Production Overview</h2>
-
-<div id="prodPlot"></div>
-
 <script>
 
-const data = {
+let allRows = [];
 
-    F1: {
+Papa.parse("volvedatacsv.csv", {
 
-        name: "15/9-F-1 C",
+    download: true,
+    header: true,
 
-        peakOil: "6000 BOPD",
+    complete: function(results) {
 
-        peakWater: "6200 BWPD",
+        allRows = results.data;
 
-        peakGas: "0.20 MMSCFD",
+        const wells = [
+            ...new Set(
+                allRows
+                    .map(row => row.NPD_WELL_BORE_NAME)
+                    .filter(Boolean)
+            )
+        ].sort();
 
-        oil: [6000, 5500, 5000, 4500, 4000],
+        const selector =
+            document.getElementById(
+                "wellSelector"
+            );
 
-        water: [100, 300, 700, 1200, 1800],
+        selector.innerHTML = "";
 
-        gas: [0.10, 0.12, 0.14, 0.17, 0.20]
+        wells.forEach(well => {
 
-    },
+            const option =
+                document.createElement(
+                    "option"
+                );
 
-    F11: {
+            option.value = well;
+            option.text = well;
 
-        name: "15/9-F-11 B",
+            selector.appendChild(
+                option
+            );
 
-        peakOil: "4500 BOPD",
+        });
 
-        peakWater: "3000 BWPD",
+        selector.addEventListener(
+            "change",
+            function() {
 
-        peakGas: "0.15 MMSCFD",
+                updateDashboard(
+                    this.value
+                );
 
-        oil: [4500, 4200, 3900, 3400, 3100],
+            }
+        );
 
-        water: [500, 700, 1200, 1800, 2500],
-
-        gas: [0.08, 0.09, 0.11, 0.13, 0.15]
+        updateDashboard(
+            wells[0]
+        );
 
     }
 
-};
+});
 
-function updateDashboard(well) {
+function updateDashboard(wellName){
 
-    document.getElementById("wellName").innerText =
-        data[well].name;
+    const wellData = allRows.filter(
+        row =>
+        row.NPD_WELL_BORE_NAME
+        === wellName
+    );
 
-    document.getElementById("peakOil").innerText =
-        data[well].peakOil;
+    if(wellData.length === 0){
+        return;
+    }
 
-    document.getElementById("peakWater").innerText =
-        data[well].peakWater;
+    const oil = wellData.map(
+        row => Number(row.BORE_OIL_VOL) || 0
+    );
 
-    document.getElementById("peakGas").innerText =
-        data[well].peakGas;
+    const water = wellData.map(
+        row => Number(row.BORE_WAT_VOL) || 0
+    );
 
-    var oilTrace = {
-        x: [1,2,3,4,5],
-        y: data[well].oil,
-        name: "Oil Rate",
-        line: {color:"green"}
-    };
+    const gas = wellData.map(
+        row => Number(row.BORE_GAS_VOL) || 0
+    );
 
-    var waterTrace = {
-        x: [1,2,3,4,5],
-        y: data[well].water,
-        name: "Water Rate",
-        line: {color:"blue"}
-    };
+    const dates = wellData.map(
+        row => row.DATEPRD
+    );
 
-    var gasTrace = {
-        x: [1,2,3,4,5],
-        y: data[well].gas,
-        name: "Gas Rate",
-        yaxis: "y2",
-        line: {color:"orange"}
-    };
+    document.getElementById(
+        "wellName"
+    ).innerText = wellName;
+
+    document.getElementById(
+        "peakOil"
+    ).innerText =
+        Math.max(...oil).toFixed(0)
+        + " Sm³/d";
+
+    document.getElementById(
+        "peakWater"
+    ).innerText =
+        Math.max(...water).toFixed(0)
+        + " Sm³/d";
+
+    document.getElementById(
+        "peakGas"
+    ).innerText =
+        Math.max(...gas).toFixed(0)
+        + " Sm³/d";
 
     Plotly.newPlot(
-        'prodPlot',
-        [oilTrace, waterTrace, gasTrace],
+        "prodPlot",
+        [
+
+            {
+                x: dates,
+                y: oil,
+                name: "Oil Rate",
+                line: {
+                    color: "green"
+                }
+            },
+
+            {
+                x: dates,
+                y: water,
+                name: "Water Rate",
+                line: {
+                    color: "blue"
+                }
+            },
+
+            {
+                x: dates,
+                y: gas,
+                name: "Gas Rate",
+                yaxis: "y2",
+                line: {
+                    color: "orange"
+                }
+            }
+
+        ],
+
         {
-            title: 'Production Overview',
+
+            title:
+                "Production Overview - "
+                + wellName,
 
             yaxis: {
-                title: 'Liquid Rate (BOPD/BWPD)'
+                title:
+                    "Oil / Water Rate"
             },
 
             yaxis2: {
-                title: 'Gas Rate (MMSCFD)',
-                overlaying: 'y',
-                side: 'right'
+                title:
+                    "Gas Rate",
+                overlaying: "y",
+                side: "right"
             }
+
         }
+
     );
+
 }
 
-document.getElementById("wellSelector")
-.addEventListener("change", function() {
-
-    updateDashboard(this.value);
-
-});
-
-updateDashboard("F1");
-
 </script>
-
-</body>
-</html>
