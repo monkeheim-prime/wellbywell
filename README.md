@@ -6,7 +6,7 @@ Static dashboards for the Volve field daily production data, published with GitH
 |---|---|
 | `index.html` | Oil, water and gas rates per well, with peak, current and field KPIs |
 | `water_analysis.html` | Water rate, water cut and a Chan (1995) WOR diagnostic plot |
-| `stimulation_screening.html` | Oil rate against downhole pressure, with a simple screening flag |
+| `stimulation_screening.html` | Oil rate against downhole pressure with a screening flag, and a monthly heterogeneity index (HI) crossplot |
 
 All three pages read `volvedatacsv.csv` in the browser (PapaParse + Plotly). Shared parsing lives in
 `common.js` and shared styling in `style.css`.
