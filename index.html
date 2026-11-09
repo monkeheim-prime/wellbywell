@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>Volve Well Review</title>
 
@@ -35,12 +34,13 @@
         #prodPlot {
             background: white;
             border-radius: 10px;
+            min-height: 500px;
             padding: 10px;
         }
 
         select {
             padding: 8px;
-            font-size: 14px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -49,16 +49,12 @@
 
 <h1>Volve Field Well Review</h1>
 
-<div style="margin-bottom:20px;">
-
 <label><b>Select Well:</b></label>
 
 <select id="wellSelector">
-    <option>15/9-F-1 C</option>
-    <option>15/9-F-11 B</option>
+    <option value="F1">15/9-F-1 C</option>
+    <option value="F11">15/9-F-11 B</option>
 </select>
-
-</div>
 
 <div class="dashboard">
 
@@ -90,20 +86,111 @@
 
 <script>
 
-const wellData = {
+const data = {
 
-"15/9-F-1 C":{
+    F1: {
 
-peakOil:"6000 BOPD",
-peakWater:"6200 BWPD",
-peakGas:"0.20 MMSCFD",
+        name: "15/9-F-1 C",
 
-oil:[6000,5600,5200,4800],
-water:[100,300,600,1000],
-gas:[0.10,0.12,0.15,0.20]
+        peakOil: "6000 BOPD",
 
-},
+        peakWater: "6200 BWPD",
 
-"15/9-F-11 B":{
+        peakGas: "0.20 MMSCFD",
 
-peakOil:"4500 BOPD",
+        oil: [6000, 5500, 5000, 4500, 4000],
+
+        water: [100, 300, 700, 1200, 1800],
+
+        gas: [0.10, 0.12, 0.14, 0.17, 0.20]
+
+    },
+
+    F11: {
+
+        name: "15/9-F-11 B",
+
+        peakOil: "4500 BOPD",
+
+        peakWater: "3000 BWPD",
+
+        peakGas: "0.15 MMSCFD",
+
+        oil: [4500, 4200, 3900, 3400, 3100],
+
+        water: [500, 700, 1200, 1800, 2500],
+
+        gas: [0.08, 0.09, 0.11, 0.13, 0.15]
+
+    }
+
+};
+
+function updateDashboard(well) {
+
+    document.getElementById("wellName").innerText =
+        data[well].name;
+
+    document.getElementById("peakOil").innerText =
+        data[well].peakOil;
+
+    document.getElementById("peakWater").innerText =
+        data[well].peakWater;
+
+    document.getElementById("peakGas").innerText =
+        data[well].peakGas;
+
+    var oilTrace = {
+        x: [1,2,3,4,5],
+        y: data[well].oil,
+        name: "Oil Rate",
+        line: {color:"green"}
+    };
+
+    var waterTrace = {
+        x: [1,2,3,4,5],
+        y: data[well].water,
+        name: "Water Rate",
+        line: {color:"blue"}
+    };
+
+    var gasTrace = {
+        x: [1,2,3,4,5],
+        y: data[well].gas,
+        name: "Gas Rate",
+        yaxis: "y2",
+        line: {color:"orange"}
+    };
+
+    Plotly.newPlot(
+        'prodPlot',
+        [oilTrace, waterTrace, gasTrace],
+        {
+            title: 'Production Overview',
+
+            yaxis: {
+                title: 'Liquid Rate (BOPD/BWPD)'
+            },
+
+            yaxis2: {
+                title: 'Gas Rate (MMSCFD)',
+                overlaying: 'y',
+                side: 'right'
+            }
+        }
+    );
+}
+
+document.getElementById("wellSelector")
+.addEventListener("change", function() {
+
+    updateDashboard(this.value);
+
+});
+
+updateDashboard("F1");
+
+</script>
+
+</body>
+</html>
