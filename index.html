@@ -172,7 +172,7 @@ Papa.parse("volvedatacsv.csv", {
         });
 
         if (wells.length > 0) {
-            updateWell(wells[0]); // FIXED: Now passing the single first well name properly to render the initial chart instead of breaking loops
+            updateWell(wells[0]); // FIXED: Explicitly selecting position [0] string to prevent layout loop crashes
         }
     }
 });
