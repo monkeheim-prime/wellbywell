@@ -1,25 +1,232 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>Volve Field Water Analysis</title>
+    <title>Volve Field Water Analysis Dashboard</title>
+    <!-- Stable CDN Paths for Graphing and Parsing Libraries -->
+    <script src="https://plot.ly"></script>
+    <script src="https://jsdelivr.net"></script>
+
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
-        .top-navbar { background-color: #002244; padding: 10px 20px; margin: -40px -40px 30px -40px; display: flex gap: 10px; border-bottom: 4px solid #0055a5; }
-        .nav-tab { color: #ffffff; text-decoration: none; padding: 10px 20px; font-size: 15px; font-weight: bold; border-radius: 6px 6px 0 0; background-color: #003366; transition: background 0.2s ease-in-out; }
-        .nav-tab.active { background-color: #f4f4f4; color: #003366; border-bottom: 4px solid #f4f4f4; margin-bottom: -14px; }
-        .content { background: white; padding: 20px; border-radius: 8px; margin-top: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f4f4f4;
+        }
+
+        /* Top Navigation Tabs Styling matching your theme colors */
+        .top-navbar {
+            background-color: #002244;
+            padding: 10px 20px;
+            margin: -40px -40px 30px -40px;
+            display: flex;
+            gap: 10px;
+            border-bottom: 4px solid #0055a5;
+        }
+
+        .nav-tab {
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px 6px 0 0;
+            background-color: #003366;
+            transition: background 0.2s ease-in-out;
+        }
+
+        .nav-tab:hover {
+            background-color: #0055a5;
+        }
+
+        .nav-tab.active {
+            background-color: #f4f4f4;
+            color: #003366;
+            border-bottom: 4px solid #f4f4f4;
+            margin-bottom: -14px;
+        }
+
+        h1 {
+            color: #003366;
+            margin-top: 10px;
+        }
+
+        select {
+            padding: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            width: 220px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #003366;
+            font-size: 16px;
+        }
+
+        .card p {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0 0 0;
+        }
+
+        #waterPlot {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
+
 <body>
+
+<!-- Top Navigation Tabs -->
 <nav class="top-navbar">
     <a href="index.html" class="nav-tab">Well Review</a>
     <a href="stimulation_screening.html" class="nav-tab">Stimulation Screening</a>
     <a href="water_analysis.html" class="nav-tab active">Water Analysis</a>
 </nav>
-<div class="content">
-    <h1>Water Analysis Dashboard</h1>
-    <p>Framework placeholder loaded successfully. Ready to build custom water charts or recovery logs.</p>
+
+<h1>Water Diagnostic & Diagnostic Profiling</h1>
+
+<label><b>Select Well for Diagnostics:</b></label>
+<select id="waterWellSelector">
+    <option>Loading asset network...</option>
+</select>
+
+<div class="dashboard">
+    <div class="card">
+        <h3>Selected Well</h3>
+        <p id="diagWellName">-</p>
+    </div>
+    <div class="card">
+        <h3>Peak Water Rate</h3>
+        <p id="diagPeakWater">-</p>
+    </div>
+    <div class="card">
+        <h3>Cumulative Water</h3>
+        <p id="diagCumWater">-</p>
+    </div>
+    <div class="card">
+        <h3>Current Water Cut</h3>
+        <p id="diagCurrentCut">-</p>
+    </div>
 </div>
+
+<div id="waterPlot"></div>
+
+<script>
+const SM3_TO_BBL = 6.2898;
+let allWaterRows = [];
+
+// Parse data safely matching your verified index.html framework architecture
+Papa.parse("volvedatacsv.csv", {
+    download: true,
+    header: true,
+    complete: function(results) {
+        allWaterRows = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.DATEPRD);
+
+        const wells = [...new Set(allWaterRows.map(r => r.NPD_WELL_BORE_NAME))].sort();
+        const selector = document.getElementById("waterWellSelector");
+        selector.innerHTML = "";
+
+        wells.forEach(well => {
+            const option = document.createElement("option");
+            option.value = well;
+            option.text = well;
+            selector.appendChild(option);
+        });
+
+        selector.addEventListener("change", function() {
+            updateWaterDiagnostics(this.value);
+        });
+
+        if (wells.length > 0) {
+            updateWaterDiagnostics(wells[0]); // Explicitly targeting string element index 0 to avoid crash loops
+        }
+    }
+});
+
+function updateWaterDiagnostics(wellName) {
+    const wellData = allWaterRows.filter(r => r.NPD_WELL_BORE_NAME === wellName);
+    if (wellData.length === 0) return;
+
+    // Map time arrays and production values converted safely to Oil Field Units
+    const dates = wellData.map(r => r.DATEPRD);
+    const waterRates = wellData.map(r => (Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL);
+    const oilRates = wellData.map(r => (Number(r.BORE_OIL_VOL) || 0) * SM3_TO_BBL);
+    
+    // Calculate cumulative lifetime water volume
+    const cumWaterBbl = waterRates.reduce((sum, val) => sum + val, 0);
+
+    // Calculate dynamic fractional and percentage values for Water Cut profile tracking
+    const waterCutProfiles = wellData.map(r => {
+        const o = (Number(r.BORE_OIL_VOL) || 0);
+        const w = (Number(r.BORE_WAT_VOL) || 0);
+        const totalLiquids = o + w;
+        return totalLiquids > 0 ? ((w / totalLiquids) * 100) : 0;
+    });
+
+    // Populate summary profile interface display elements
+    document.getElementById("diagWellName").innerText = wellName;
+    document.getElementById("diagPeakWater").innerText = Math.max(...waterRates).toFixed(0) + " BWPD";
+    document.getElementById("diagCumWater").innerText = (cumWaterBbl / 1000000).toFixed(2) + " MM bbls";
+    document.getElementById("diagCurrentCut").innerText = waterCutProfiles[waterCutProfiles.length - 1].toFixed(1) + " %";
+
+    // Setup interactive tracking plot paths
+    const rateTrace = {
+        x: dates,
+        y: waterRates,
+        name: "Water Rate (BWPD)",
+        type: 'scatter',
+        line: { color: "blue", width: 2 }
+    };
+
+    const cutTrace = {
+        x: dates,
+        y: waterCutProfiles,
+        name: "Water Cut (%)",
+        type: 'scatter',
+        yaxis: 'y2',
+        line: { color: "lightblue", width: 2, dash: "dash" }
+    };
+
+    const layout = {
+        title: `${wellName} Water Production & Cut Diagnostic Log Profile`,
+        hovermode: "x unified",
+        xaxis: { title: "Reporting Date Timeline Log" },
+        yaxis: { title: "Water Production Volumetric Rate (BWPD)", color: "blue" },
+        yaxis2: {
+            title: "Calculated Water Cut State Fraction (%)",
+            color: "darkblue",
+            overlaying: 'y',
+            side: 'right',
+            range: [0, 100]
+        }
+    };
+
+    Plotly.newPlot("waterPlot", [rateTrace, cutTrace], layout);
+}
+</script>
+
 </body>
 </html>
+
