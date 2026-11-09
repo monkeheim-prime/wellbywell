@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Volve Field Well Stimulation Screening</title>
-    <!-- Stable CDN Paths for Graphing and Parsing Libraries -->
     <script src="https://plot.ly"></script>
     <script src="https://jsdelivr.net"></script>
 
@@ -115,21 +114,19 @@
 </div>
 
 <script>
-// Parse lifecycle metrics out of the primary reservoir table log
 Papa.parse("volvedatacsv.csv", {
     download: true,
     header: true,
     complete: function(results) {
-        // Filter array entries to ensure valid row entries are parsed
-        const cleanRows = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.NPD_WELL_BORE_NAME.trim() !== "");
+        // Matches index.html logic exactly to prevent row parsing crashes
+        const cleanRows = results.data.filter(row => row.NPD_WELL_BORE_NAME);
         
         let wellMetrics = {};
         let totalFieldOil = 0;
         let totalFieldWater = 0;
 
-        // Group allocations sequentially to find lifetime cumulative volumes
         cleanRows.forEach(row => {
-            const well = row.NPD_WELL_BORE_NAME.trim();
+            const well = row.NPD_WELL_BORE_NAME; // Removed .trim() which was crashing the file loop
             const oVol = Number(row.BORE_OIL_VOL) || 0;
             const wVol = Number(row.BORE_WAT_VOL) || 0;
 
@@ -144,7 +141,7 @@ Papa.parse("volvedatacsv.csv", {
         const activeCount = wellNames.length;
         
         if (activeCount === 0) {
-            document.getElementById("rankingTableBody").innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error: No data records parsed.</td></tr>`;
+            document.getElementById("rankingTableBody").innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error: No data records found.</td></tr>`;
             return;
         }
 
@@ -163,7 +160,6 @@ Papa.parse("volvedatacsv.csv", {
             
             let status = "Good Performance", color = "green", priority = "Low", pClass = "priority-low";
 
-            // Screening diagnostic boundaries relative to the 1.0 field baseline average
             if (oHI < 1.0 && wHI > 1.0) {
                 status = "Stimulation Candidate"; 
                 color = "red";
@@ -186,10 +182,8 @@ Papa.parse("volvedatacsv.csv", {
             });
         });
 
-        // Bubble top target priorities upward on table rows layout
         processedData.sort((a, b) => b.score - a.score);
 
-        // Render Table Elements
         const tbody = document.getElementById("rankingTableBody");
         tbody.innerHTML = "";
         
@@ -209,7 +203,6 @@ Papa.parse("volvedatacsv.csv", {
             traces[d.color].text.push(d.name);
         });
 
-        // Plotly Configuration Framework
         const plotDataTraces = [traces.red, traces.blue, traces.green].filter(t => t.x.length > 0);
 
         Plotly.newPlot('hiPlot', plotDataTraces, {
