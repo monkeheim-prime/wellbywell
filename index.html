@@ -1,14 +1,78 @@
+<!DOCTYPE html>
+<html>
 <head>
-    <title>Volve Well Review</title>
+    <title>Volve Field Well Review</title>
 
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
     <style>
-        ...
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f4f4f4;
+        }
+
+        h1 {
+            color: #003366;
+        }
+
+        select {
+            padding: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            width: 200px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
     </style>
 </head>
+
+<body>
+
+<h1>Volve Field Well Review</h1>
+
+<label><b>Select Well:</b></label>
+
+<select id="wellSelector"></select>
+
+<div class="dashboard">
+
+    <div class="card">
+        <h3>Well</h3>
+        <p id="wellName">Loading...</p>
+    </div>
+
+    <div class="card">
+        <h3>Peak Oil</h3>
+        <p id="peakOil">-</p>
+    </div>
+
+    <div class="card">
+        <h3>Peak Water</h3>
+        <p id="peakWater">-</p>
+    </div>
+
+    <div class="card">
+        <h3>Peak Gas</h3>
+        <p id="peakGas">-</p>
+    </div>
+
+</div>
+
+<div id="prodPlot"></div>
 
 <script>
 
@@ -21,22 +85,24 @@ Papa.parse("volvedatacsv.csv", {
 
     complete: function(results) {
 
+        console.log(results);
+
         allRows = results.data;
 
         const wells = [
             ...new Set(
                 allRows
-                    .map(row => row.NPD_WELL_BORE_NAME)
+                    .map(r => r.NPD_WELL_BORE_NAME)
                     .filter(Boolean)
             )
         ].sort();
+
+        console.log("WELLS:", wells);
 
         const selector =
             document.getElementById(
                 "wellSelector"
             );
-
-        selector.innerHTML = "";
 
         wells.forEach(well => {
 
@@ -58,127 +124,112 @@ Papa.parse("volvedatacsv.csv", {
             "change",
             function() {
 
-                updateDashboard(
+                updateWell(
                     this.value
                 );
 
             }
         );
 
-        updateDashboard(
-            wells[0]
-        );
+        if(wells.length > 0){
+            updateWell(
+                wells[0]
+            );
+        }
 
     }
 
 });
 
-function updateDashboard(wellName){
+function updateWell(wellName){
 
-    const wellData = allRows.filter(
-        row =>
-        row.NPD_WELL_BORE_NAME
-        === wellName
-    );
+    const wellData =
+        allRows.filter(
+            r =>
+            r.NPD_WELL_BORE_NAME === wellName
+        );
 
     if(wellData.length === 0){
         return;
     }
 
-    const oil = wellData.map(
-        row => Number(row.BORE_OIL_VOL) || 0
-    );
-
-    const water = wellData.map(
-        row => Number(row.BORE_WAT_VOL) || 0
-    );
-
-    const gas = wellData.map(
-        row => Number(row.BORE_GAS_VOL) || 0
-    );
-
-    const dates = wellData.map(
-        row => row.DATEPRD
-    );
-
     document.getElementById(
         "wellName"
     ).innerText = wellName;
 
+    const oil =
+        wellData.map(
+            r => Number(r.BORE_OIL_VOL) || 0
+        );
+
+    const water =
+        wellData.map(
+            r => Number(r.BORE_WAT_VOL) || 0
+        );
+
+    const gas =
+        wellData.map(
+            r => Number(r.BORE_GAS_VOL) || 0
+        );
+
+    const dates =
+        wellData.map(
+            r => r.DATEPRD
+        );
+
     document.getElementById(
         "peakOil"
     ).innerText =
-        Math.max(...oil).toFixed(0)
-        + " Sm³/d";
+        Math.max(...oil).toFixed(0);
 
     document.getElementById(
         "peakWater"
     ).innerText =
-        Math.max(...water).toFixed(0)
-        + " Sm³/d";
+        Math.max(...water).toFixed(0);
 
     document.getElementById(
         "peakGas"
     ).innerText =
-        Math.max(...gas).toFixed(0)
-        + " Sm³/d";
+        Math.max(...gas).toFixed(0);
 
     Plotly.newPlot(
-        "prodPlot",
+        'prodPlot',
         [
-
             {
                 x: dates,
                 y: oil,
-                name: "Oil Rate",
-                line: {
-                    color: "green"
-                }
+                name: "Oil Rate"
             },
-
             {
                 x: dates,
                 y: water,
-                name: "Water Rate",
-                line: {
-                    color: "blue"
-                }
+                name: "Water Rate"
             },
-
             {
                 x: dates,
                 y: gas,
                 name: "Gas Rate",
-                yaxis: "y2",
-                line: {
-                    color: "orange"
-                }
+                yaxis: "y2"
             }
-
         ],
-
         {
-
-            title:
-                "Production Overview - "
-                + wellName,
+            title: wellName,
 
             yaxis: {
-                title:
-                    "Oil / Water Rate"
+                title: "Oil / Water"
             },
 
             yaxis2: {
-                title:
-                    "Gas Rate",
+                title: "Gas",
                 overlaying: "y",
                 side: "right"
             }
-
         }
-
     );
 
 }
 
 </script>
+
+</body>
+</html>
