@@ -171,47 +171,49 @@ Papa.parse("volvedatacsv.csv", {
             updateWell(this.value);
         });
 
-        if(wells.length > 0){
-            updateWell(wells[0]);
+        if (wells.length > 0) {
+            updateWell(wells[0]); // FIXED: Now passing the single first well name properly to render the initial chart instead of breaking loops
         }
     }
 });
 
-function calculateFieldKPIs(){
+function calculateFieldKPIs() {
     const sortedDates = allRows
         .map(r => r.DATEPRD)
         .filter(Boolean)
         .sort();
         
+    if (sortedDates.length === 0) return;
+    
     const latestDate = sortedDates[sortedDates.length - 1];
     const latestRows = allRows.filter(r => r.DATEPRD === latestDate);
 
-    const fieldOil = latestRows.reduce((sum,r) => sum + ((Number(r.BORE_OIL_VOL)||0) * SM3_TO_BBL), 0);
-    const fieldWater = latestRows.reduce((sum,r) => sum + ((Number(r.BORE_WAT_VOL)||0) * SM3_TO_BBL), 0);
-    const fieldGas = latestRows.reduce((sum,r) => sum + ((Number(r.BORE_GAS_VOL)||0) * SM3_TO_SCF / 1000000), 0);
+    const fieldOil = latestRows.reduce((sum, r) => sum + ((Number(r.BORE_OIL_VOL) || 0) * SM3_TO_BBL), 0);
+    const fieldWater = latestRows.reduce((sum, r) => sum + ((Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL), 0);
+    const fieldGas = latestRows.reduce((sum, r) => sum + ((Number(r.BORE_GAS_VOL) || 0) * SM3_TO_SCF / 1000000), 0);
 
     document.getElementById("fieldOil").innerText = fieldOil.toFixed(0) + " BOPD";
     document.getElementById("fieldWater").innerText = fieldWater.toFixed(0) + " BWPD";
     document.getElementById("fieldGas").innerText = fieldGas.toFixed(2) + " MMSCFD";
 }
 
-function updateWell(wellName){
+function updateWell(wellName) {
     const wellData = allRows.filter(r => r.NPD_WELL_BORE_NAME === wellName);
-    if(wellData.length === 0) return;
+    if (wellData.length === 0) return;
 
     const dates = wellData.map(r => r.DATEPRD);
-    const oil = wellData.map(r => (Number(r.BORE_OIL_VOL)||0) * SM3_TO_BBL);
-    const water = wellData.map(r => (Number(r.BORE_WAT_VOL)||0) * SM3_TO_BBL);
-    const gas = wellData.map(r => (Number(r.BORE_GAS_VOL)||0) * SM3_TO_SCF / 1000000);
+    const oil = wellData.map(r => (Number(r.BORE_OIL_VOL) || 0) * SM3_TO_BBL);
+    const water = wellData.map(r => (Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL);
+    const gas = wellData.map(r => (Number(r.BORE_GAS_VOL) || 0) * SM3_TO_SCF / 1000000);
 
     document.getElementById("wellName").innerText = wellName;
     document.getElementById("peakOil").innerText = Math.max(...oil).toFixed(0) + " BOPD";
     document.getElementById("peakWater").innerText = Math.max(...water).toFixed(0) + " BWPD";
     document.getElementById("peakGas").innerText = Math.max(...gas).toFixed(2) + " MMSCFD";
     
-    document.getElementById("currentOil").innerText = oil[oil.length-1].toFixed(0) + " BOPD";
-    document.getElementById("currentWater").innerText = water[water.length-1].toFixed(0) + " BWPD";
-    document.getElementById("currentGas").innerText = gas[gas.length-1].toFixed(2) + " MMSCFD";
+    document.getElementById("currentOil").innerText = oil[oil.length - 1].toFixed(0) + " BOPD";
+    document.getElementById("currentWater").innerText = water[water.length - 1].toFixed(0) + " BWPD";
+    document.getElementById("currentGas").innerText = gas[gas.length - 1].toFixed(2) + " MMSCFD";
 
     const oilTrace = { x: dates, y: oil, name: "Oil Rate (BOPD)", line: { color: "green" } };
     const waterTrace = { x: dates, y: water, name: "Water Rate (BWPD)", line: { color: "blue" } };
