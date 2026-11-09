@@ -1,35 +1,15 @@
-<script>
-
-alert("Page Loaded");
-
-fetch("volvedatacsv.csv")
-.then(r => r.text())
-.then(data => {
-
-    alert("CSV FOUND");
-
-    console.log(data.substring(0,500));
-
-})
-.catch(err => {
-
-    alert("CSV ERROR");
-
-    console.log(err);
-
-});
-
-</script>
-
 <!DOCTYPE html>
 <html>
+
 <head>
+
     <title>Volve Field Well Review</title>
 
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
     <style>
+
         body {
             font-family: Arial, sans-serif;
             margin: 40px;
@@ -57,10 +37,22 @@ fetch("volvedatacsv.csv")
             background: white;
             padding: 15px;
             border-radius: 8px;
-            width: 200px;
+            width: 220px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.15);
         }
+
+        .card h3 {
+            margin-top: 0;
+        }
+
+        #prodPlot {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
     </style>
+
 </head>
 
 <body>
@@ -93,11 +85,44 @@ fetch("volvedatacsv.csv")
         <p id="peakGas">-</p>
     </div>
 
+    <div class="card">
+        <h3>Current Oil</h3>
+        <p id="currentOil">-</p>
+    </div>
+
+    <div class="card">
+        <h3>Current Water</h3>
+        <p id="currentWater">-</p>
+    </div>
+
+    <div class="card">
+        <h3>Current Gas</h3>
+        <p id="currentGas">-</p>
+    </div>
+
+    <div class="card">
+        <h3>Field Oil</h3>
+        <p id="fieldOil">-</p>
+    </div>
+
+    <div class="card">
+        <h3>Field Water</h3>
+        <p id="fieldWater">-</p>
+    </div>
+
+    <div class="card">
+        <h3>Field Gas</h3>
+        <p id="fieldGas">-</p>
+    </div>
+
 </div>
 
 <div id="prodPlot"></div>
 
 <script>
+
+const SM3_TO_BBL = 6.2898;
+const SM3_TO_SCF = 35.3147;
 
 let allRows = [];
 
@@ -108,24 +133,24 @@ Papa.parse("volvedatacsv.csv", {
 
     complete: function(results) {
 
-        console.log(results);
-
-        allRows = results.data;
+        allRows = results.data.filter(
+            row => row.NPD_WELL_BORE_NAME
+        );
 
         const wells = [
             ...new Set(
-                allRows
-                    .map(r => r.NPD_WELL_BORE_NAME)
-                    .filter(Boolean)
+                allRows.map(
+                    r => r.NPD_WELL_BORE_NAME
+                )
             )
         ].sort();
-
-        console.log("WELLS:", wells);
 
         const selector =
             document.getElementById(
                 "wellSelector"
             );
+
+        selector.innerHTML = "";
 
         wells.forEach(well => {
 
@@ -143,6 +168,8 @@ Papa.parse("volvedatacsv.csv", {
 
         });
 
+        calculateFieldKPIs();
+
         selector.addEventListener(
             "change",
             function() {
@@ -155,99 +182,228 @@ Papa.parse("volvedatacsv.csv", {
         );
 
         if(wells.length > 0){
+
             updateWell(
                 wells[0]
             );
+
         }
 
     }
 
 });
 
+function calculateFieldKPIs(){
+
+    const latestDate = allRows
+        .map(r => r.DATEPRD)
+        .filter(Boolean)
+        .sort()
+        .slice(-1)[0];
+
+    const latestRows =
+        allRows.filter(
+            r => r.DATEPRD === latestDate
+        );
+
+    const fieldOil =
+        latestRows.reduce(
+            (sum,r) =>
+            sum +
+            ((Number(r.BORE_OIL_VOL)||0)
+            * SM3_TO_BBL),
+            0
+        );
+
+    const fieldWater =
+        latestRows.reduce(
+            (sum,r) =>
+            sum +
+            ((Number(r.BORE_WAT_VOL)||0)
+            * SM3_TO_BBL),
+            0
+        );
+
+    const fieldGas =
+        latestRows.reduce(
+            (sum,r) =>
+            sum +
+            ((Number(r.BORE_GAS_VOL)||0)
+            * SM3_TO_SCF
+            / 1000000),
+            0
+        );
+
+    document.getElementById(
+        "fieldOil"
+    ).innerText =
+        fieldOil.toFixed(0)
+        + " BOPD";
+
+    document.getElementById(
+        "fieldWater"
+    ).innerText =
+        fieldWater.toFixed(0)
+        + " BWPD";
+
+    document.getElementById(
+        "fieldGas"
+    ).innerText =
+        fieldGas.toFixed(2)
+        + " MMSCFD";
+
+}
+
 function updateWell(wellName){
 
     const wellData =
         allRows.filter(
             r =>
-            r.NPD_WELL_BORE_NAME === wellName
+            r.NPD_WELL_BORE_NAME
+            === wellName
         );
 
     if(wellData.length === 0){
         return;
     }
 
-    document.getElementById(
-        "wellName"
-    ).innerText = wellName;
-
-    const oil =
-        wellData.map(
-            r => Number(r.BORE_OIL_VOL) || 0
-        );
-
-    const water =
-        wellData.map(
-            r => Number(r.BORE_WAT_VOL) || 0
-        );
-
-    const gas =
-        wellData.map(
-            r => Number(r.BORE_GAS_VOL) || 0
-        );
-
     const dates =
         wellData.map(
             r => r.DATEPRD
         );
 
+    const oil =
+        wellData.map(
+            r =>
+            (Number(r.BORE_OIL_VOL)||0)
+            * SM3_TO_BBL
+        );
+
+    const water =
+        wellData.map(
+            r =>
+            (Number(r.BORE_WAT_VOL)||0)
+            * SM3_TO_BBL
+        );
+
+    const gas =
+        wellData.map(
+            r =>
+            (Number(r.BORE_GAS_VOL)||0)
+            * SM3_TO_SCF
+            / 1000000
+        );
+
+    document.getElementById(
+        "wellName"
+    ).innerText =
+        wellName;
+
     document.getElementById(
         "peakOil"
     ).innerText =
-        Math.max(...oil).toFixed(0);
+        Math.max(...oil).toFixed(0)
+        + " BOPD";
 
     document.getElementById(
         "peakWater"
     ).innerText =
-        Math.max(...water).toFixed(0);
+        Math.max(...water).toFixed(0)
+        + " BWPD";
 
     document.getElementById(
         "peakGas"
     ).innerText =
-        Math.max(...gas).toFixed(0);
+        Math.max(...gas).toFixed(2)
+        + " MMSCFD";
+
+    document.getElementById(
+        "currentOil"
+    ).innerText =
+        oil[oil.length-1].toFixed(0)
+        + " BOPD";
+
+    document.getElementById(
+        "currentWater"
+    ).innerText =
+        water[water.length-1].toFixed(0)
+        + " BWPD";
+
+    document.getElementById(
+        "currentGas"
+    ).innerText =
+        gas[gas.length-1].toFixed(2)
+        + " MMSCFD";
+
+    const oilTrace = {
+
+        x: dates,
+        y: oil,
+        name: "Oil Rate (BOPD)",
+        line: {
+            color: "green"
+        }
+
+    };
+
+    const waterTrace = {
+
+        x: dates,
+        y: water,
+        name: "Water Rate (BWPD)",
+        line: {
+            color: "blue"
+        }
+
+    };
+
+    const gasTrace = {
+
+        x: dates,
+        y: gas,
+        name: "Gas Rate (MMSCFD)",
+        yaxis: "y2",
+        line: {
+            color: "orange"
+        }
+
+    };
 
     Plotly.newPlot(
-        'prodPlot',
+
+        "prodPlot",
+
         [
-            {
-                x: dates,
-                y: oil,
-                name: "Oil Rate"
-            },
-            {
-                x: dates,
-                y: water,
-                name: "Water Rate"
-            },
-            {
-                x: dates,
-                y: gas,
-                name: "Gas Rate",
-                yaxis: "y2"
-            }
+            oilTrace,
+            waterTrace,
+            gasTrace
         ],
+
         {
-            title: wellName,
+
+            title:
+                wellName
+                + " Production Overview",
+
+            hovermode:
+                "x unified",
 
             yaxis: {
-                title: "Oil / Water"
+                title:
+                    "Liquid Rate (BOPD / BWPD)"
             },
 
             yaxis2: {
-                title: "Gas",
-                overlaying: "y",
-                side: "right"
+                title:
+                    "Gas Rate (MMSCFD)",
+                overlaying:
+                    "y",
+                side:
+                    "right"
             }
+
         }
+
     );
 
 }
