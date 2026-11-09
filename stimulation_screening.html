@@ -2,7 +2,9 @@
 <html>
 
 <head>
-    <title>Volve Field Well Dashboard</title>
+    <meta charset="UTF-8">
+    <title>Volve Field Stimulation Screening</title>
+    <!-- Stable CDN Paths for Graphing and Parsing Libraries -->
     <script src="https://plot.ly"></script>
     <script src="https://jsdelivr.net"></script>
 
@@ -13,6 +15,7 @@
             background: #f4f4f4;
         }
 
+        /* Top Navigation Tabs Styling */
         .top-navbar {
             background-color: #002244;
             padding: 10px 20px;
@@ -49,35 +52,70 @@
             margin-top: 10px;
         }
 
-        select {
-            padding: 8px;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-
-        .dashboard {
+        .content-container {
             display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .card {
+            flex-direction: column;
+            gap: 20px;
             background: white;
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
-            width: 220px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
-        .card h3 {
-            margin-top: 0;
+        #hiPlot {
+            width: 100%;
+            height: 500px;
         }
 
-        #prodPlot {
-            background: white;
-            border-radius: 8px;
-            padding: 10px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #003366;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .priority-high {
+            color: white;
+            background-color: #d9534f;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .priority-medium {
+            color: #333;
+            background-color: #f0ad4e;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .priority-low {
+            color: white;
+            background-color: #5cb85c;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
         }
     </style>
 </head>
@@ -85,143 +123,167 @@
 <body>
 
 <nav class="top-navbar">
-    <a href="index.html" class="nav-tab active">Well Review</a>
-    <a href="stimulation_screening.html" class="nav-tab">Stimulation Screening</a>
+    <a href="index.html" class="nav-tab">Well Review</a>
+    <a href="stimulation_screening.html" class="nav-tab active">Stimulation Screening</a>
     <a href="water_analysis.html" class="nav-tab">Water Analysis</a>
 </nav>
 
-<h1>Volve Field Well Review</h1>
+<h1>Stimulation Screening & Heterogeneity Diagnostics</h1>
 
-<label><b>Select Well:</b></label>
-<select id="wellSelector"></select>
+<div class="content-container">
+    <div id="hiPlot"></div>
 
-<div class="dashboard">
-    <div class="card">
-        <h3>Well</h3>
-        <p id="wellName">Loading...</p>
-    </div>
-    <div class="card">
-        <h3>Peak Oil</h3>
-        <p id="peakOil">-</p>
-    </div>
-    <div class="card">
-        <h3>Peak Water</h3>
-        <p id="peakWater">-</p>
-    </div>
-    <div class="card">
-        <h3>Peak Gas</h3>
-        <p id="peakGas">-</p>
-    </div>
-    <div class="card">
-        <h3>Current Oil</h3>
-        <p id="currentOil">-</p>
-    </div>
-    <div class="card">
-        <h3>Current Water</h3>
-        <p id="currentWater">-</p>
-    </div>
-    <div class="card">
-        <h3>Current Gas</h3>
-        <p id="currentGas">-</p>
-    </div>
-    <div class="card">
-        <h3>Field Oil</h3>
-        <p id="fieldOil">-</p>
-    </div>
-    <div class="card">
-        <h3>Field Water</h3>
-        <p id="fieldWater">-</p>
-    </div>
-    <div class="card">
-        <h3>Field Gas</h3>
-        <p id="fieldGas">-</p>
-    </div>
+    <h2>Field-Wide Candidate Ranking & Priorities</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Well Name</th>
+                <th>Oil HI</th>
+                <th>Water HI</th>
+                <th>Diagnostic Status</th>
+                <th>Priority Rank</th>
+            </tr>
+        </thead>
+        <tbody id="rankingTableBody">
+            <tr>
+                <td colspan="5">Loading lifecycle production matrices...</td>
+            </tr>
+        </tbody>
+    </table>
 </div>
 
-<div id="prodPlot"></div>
-
 <script>
-const SM3_TO_BBL = 6.2898;
-const SM3_TO_SCF = 35.3147;
-
-let allRows = [];
-
 Papa.parse("volvedatacsv.csv", {
     download: true,
     header: true,
     complete: function(results) {
-        allRows = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.DATEPRD);
+        // Safe filter: checks only that a valid well entry label string exists
+        const validRows = results.data.filter(row => row.NPD_WELL_BORE_NAME && row.NPD_WELL_BORE_NAME.trim() !== "");
+        
+        let wellMetrics = {};
+        let totalFieldOil = 0;
+        let totalFieldWater = 0;
 
-        const wells = [...new Set(allRows.map(r => r.NPD_WELL_BORE_NAME))].sort();
-        const selector = document.getElementById("wellSelector");
-        selector.innerHTML = "";
+        validRows.forEach(row => {
+            const well = row.NPD_WELL_BORE_NAME.trim();
+            const oVol = Number(row.BORE_OIL_VOL) || 0;
+            const wVol = Number(row.BORE_WAT_VOL) || 0;
 
-        wells.forEach(well => {
-            const option = document.createElement("option");
-            option.value = well;
-            option.text = well;
-            selector.appendChild(option);
+            if (!wellMetrics[well]) {
+                wellMetrics[well] = { cumOil: 0, cumWater: 0 };
+            }
+            wellMetrics[well].cumOil += oVol;
+            wellMetrics[well].cumWater += wVol;
         });
 
-        calculateFieldKPIs();
+        const wellNames = Object.keys(wellMetrics);
+        const activeCount = wellNames.length;
 
-        selector.addEventListener("change", function() {
-            updateWell(this.value);
-        });
-
-        if (wells.length > 0) {
-            updateWell(wells[0]); // FIXED: index notation correctly applied
+        if (activeCount === 0) {
+            document.getElementById("rankingTableBody").innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error: No data records parsed. Check CSV column names.</td></tr>`;
+            return;
         }
+
+        wellNames.forEach(w => {
+            totalFieldOil += wellMetrics[w].cumOil;
+            totalFieldWater += wellMetrics[w].cumWater;
+        });
+
+        const avgFieldOil = totalFieldOil / activeCount;
+        const avgFieldWater = totalFieldWater / activeCount;
+
+        let processedData = [];
+        wellNames.forEach(well => {
+            const oHI = avgFieldOil > 0 ? (wellMetrics[well].cumOil / avgFieldOil) : 0;
+            const wHI = avgFieldWater > 0 ? (wellMetrics[well].cumWater / avgFieldWater) : 0;
+            
+            let status = "Good Performance";
+            let color = "green";
+            let priority = "Low";
+            let priorityClass = "priority-low";
+
+            // Diagnostics compared directly to the 1.0 field average boundary
+            if (oHI < 1.0 && wHI > 1.0) {
+                status = "Stimulation Candidate";
+                color = "red";
+                const deficiency = wHI - oHI;
+                if (deficiency > 1.0) {
+                    priority = "High";
+                    priorityClass = "priority-high";
+                } else {
+                    priority = "Medium";
+                    priorityClass = "priority-medium";
+                }
+            } else if (wHI < 1.0 && oHI > 1.0) {
+                status = "Water Shut-Off Candidate";
+                color = "blue";
+                priority = "Low";
+                priorityClass = "priority-low";
+            }
+
+            processedData.push({
+                name: well,
+                oilHI: oHI,
+                waterHI: wHI,
+                status: status,
+                color: color,
+                priority: priority,
+                priorityClass: priorityClass,
+                score: wHI - oHI
+            });
+        });
+
+        processedData.sort((a, b) => b.score - a.score);
+
+        renderPlot(processedData);
+        renderTable(processedData);
     }
 });
 
-function calculateFieldKPIs() {
-    const sortedDates = allRows
-        .map(r => r.DATEPRD)
-        .filter(Boolean)
-        .sort();
-        
-    if (sortedDates.length === 0) return;
-    
-    const latestDate = sortedDates[sortedDates.length - 1];
-    const latestRows = allRows.filter(r => r.DATEPRD === latestDate);
+function renderPlot(data) {
+    const traces = {
+        red: { x: [], y: [], text: [], mode: 'markers', name: 'Stimulation Candidate', marker: { color: 'red', size: 14, line: {color: 'white', width: 1} } },
+        blue: { x: [], y: [], text: [], mode: 'markers', name: 'Water Shut-off Candidate', marker: { color: 'blue', size: 14, line: {color: 'white', width: 1} } },
+        green: { x: [], y: [], text: [], mode: 'markers', name: 'Good Performance', marker: { color: 'green', size: 14, line: {color: 'white', width: 1} } }
+    };
 
-    const fieldOil = latestRows.reduce((sum, r) => sum + ((Number(r.BORE_OIL_VOL) || 0) * SM3_TO_BBL), 0);
-    const fieldWater = latestRows.reduce((sum, r) => sum + ((Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL), 0);
-    const fieldGas = latestRows.reduce((sum, r) => sum + ((Number(r.BORE_GAS_VOL) || 0) * SM3_TO_SCF / 1000000), 0);
+    data.forEach(d => {
+        traces[d.color].x.push(d.oilHI);
+        traces[d.color].y.push(d.waterHI);
+        traces[d.color].text.push(d.name);
+    });
 
-    document.getElementById("fieldOil").innerText = fieldOil.toFixed(0) + " BOPD";
-    document.getElementById("fieldWater").innerText = fieldWater.toFixed(0) + " BWPD";
-    document.getElementById("fieldGas").innerText = fieldGas.toFixed(2) + " MMSCFD";
+    const plotData = [traces.red, traces.blue, traces.green].filter(t => t.x.length > 0);
+
+    const layout = {
+        title: 'Lifetime Cumulative Heterogeneity Index Diagnostics',
+        xaxis: { title: 'Oil Heterogeneity Index (Oil HI)', range: [0, 4] },
+        yaxis: { title: 'Water Heterogeneity Index (Water HI)', range: [0, 4] },
+        hovermode: 'closest',
+        shapes: [
+            { type: 'line', x0: 0, y0: 0, x1: 4, y1: 4, line: { color: 'gray', width: 1, dash: 'dash' } },
+            { type: 'line', x0: 1.0, y0: 0, x1: 1.0, y1: 4, line: { color: '#bbb', width: 1, dash: 'dot' } },
+            { type: 'line', x0: 0, y0: 1.0, x1: 4, y1: 1.0, line: { color: '#bbb', width: 1, dash: 'dot' } }
+        ]
+    };
+
+    Plotly.newPlot('hiPlot', plotData, layout);
 }
 
-function updateWell(wellName) {
-    const wellData = allRows.filter(r => r.NPD_WELL_BORE_NAME === wellName);
-    if (wellData.length === 0) return;
+function renderTable(data) {
+    const tbody = document.getElementById("rankingTableBody");
+    tbody.innerHTML = "";
 
-    const dates = wellData.map(r => r.DATEPRD);
-    const oil = wellData.map(r => (Number(r.BORE_OIL_VOL) || 0) * SM3_TO_BBL);
-    const water = wellData.map(r => (Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL);
-    const gas = wellData.map(r => (Number(r.BORE_GAS_VOL) || 0) * SM3_TO_SCF / 1000000);
-
-    document.getElementById("wellName").innerText = wellName;
-    document.getElementById("peakOil").innerText = Math.max(...oil).toFixed(0) + " BOPD";
-    document.getElementById("peakWater").innerText = Math.max(...water).toFixed(0) + " BWPD";
-    document.getElementById("peakGas").innerText = Math.max(...gas).toFixed(2) + " MMSCFD";
-    
-    document.getElementById("currentOil").innerText = oil[oil.length - 1].toFixed(0) + " BOPD";
-    document.getElementById("currentWater").innerText = water[water.length - 1].toFixed(0) + " BWPD";
-    document.getElementById("currentGas").innerText = gas[gas.length - 1].toFixed(2) + " MMSCFD";
-
-    const oilTrace = { x: dates, y: oil, name: "Oil Rate (BOPD)", line: { color: "green" } };
-    const waterTrace = { x: dates, y: water, name: "Water Rate (BWPD)", line: { color: "blue" } };
-    const gasTrace = { x: dates, y: gas, name: "Gas Rate (MMSCFD)", yaxis: "y2", line: { color: "orange" } };
-
-    Plotly.newPlot("prodPlot", [oilTrace, waterTrace, gasTrace], {
-        title: wellName + " Production Overview",
-        hovermode: "x unified",
-        yaxis: { title: "Liquid Rate (BOPD / BWPD)" },
-        yaxis2: { title: "Gas Rate (MMSCFD)", overlaying: "y", side: "right" }
+    data.forEach(d => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td><b>${d.name}</b></td>
+            <td>${d.oilHI.toFixed(2)}</td>
+            <td>${d.waterHI.toFixed(2)}</td>
+            <td>${d.status}</td>
+            <td><span class="${d.priorityClass}">${d.priority}</span></td>
+        `;
+        tbody.appendChild(row);
     });
 }
 </script>
