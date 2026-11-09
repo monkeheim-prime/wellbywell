@@ -193,7 +193,7 @@ function updateWell(wellName){
     // Calculate Cumulative Water Production (Total bbls)
     const totalWater = water.reduce((sum, val) => sum + val, 0);
 
-    // Find Max Water safely (prevents stack overflow on huge datasets)
+    // Find Max Water safely
     let maxWater = 0;
     for (let i = 0; i < water.length; i++) {
         if (water[i] > maxWater) maxWater = water[i];
