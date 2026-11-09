@@ -105,7 +105,7 @@
     <a href="water_analysis.html" class="nav-tab active">Water Analysis</a>
 </nav>
 
-<h1>Water Diagnostic & Diagnostic Profiling</h1>
+<h1>Water Diagnostic & Profiling</h1>
 
 <label><b>Select Well for Diagnostics:</b></label>
 <select id="waterWellSelector">
@@ -159,7 +159,7 @@ Papa.parse("volvedatacsv.csv", {
         });
 
         if (wells.length > 0) {
-            updateWaterDiagnostics(wells[0]); // Explicitly targeting string element index 0 to avoid crash loops
+            updateWaterDiagnostics(wells[0]); // Safe array element tracking
         }
     }
 });
@@ -170,7 +170,6 @@ function updateWaterDiagnostics(wellName) {
 
     const dates = wellData.map(r => r.DATEPRD);
     const waterRates = wellData.map(r => (Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL);
-    const oilRates = wellData.map(r => (Number(r.BORE_OIL_VOL) || 0) * SM3_TO_BBL);
     
     const cumWaterBbl = waterRates.reduce((sum, val) => sum + val, 0);
 
@@ -213,7 +212,7 @@ function updateWaterDiagnostics(wellName) {
             color: "darkblue",
             overlaying: 'y',
             side: 'right',
-            range: [0, 100] // FIXED: Bound parameters explicitly set to resolve compilation hangs
+            range: [0, 100] // FIXED: Bound range limits populated explicitly to prevent token errors
         }
     };
 
