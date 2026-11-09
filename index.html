@@ -233,7 +233,7 @@ Papa.parse("volvedatacsv.csv", {
 
 function calculateFieldKPIs(){
 
-    // FIXED: Added [0] so that latestDate evaluates to a clean string value instead of an Array context
+    // FIXED: Changed to extract the text string directly from the array position
     const latestDate = allRows
         .map(r => r.DATEPRD)
         .filter(Boolean)
