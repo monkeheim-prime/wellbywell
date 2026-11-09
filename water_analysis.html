@@ -1,57 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
     <meta charset="UTF-8">
     <title>Volve Field Water Analysis</title>
 
-    <!-- Working CDN Libraries -->
-    <script src="https://plot.ly"></script>
-    <script src="https://jsdelivr.net"></script>
+    <!-- Same libraries as your working page -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f4f4f4;
-        }
-
-        h1 {
-            color: #003366;
-            margin-top: 10px;
-        }
-
-        select {
-            padding: 8px;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-
-        .dashboard {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .card {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            width: 220px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-        }
-
-        .card h3 {
-            margin-top: 0;
-            color: #003366;
-        }
-
-        #prodPlot {
-            background: white;
-            border-radius: 8px;
-            padding: 10px;
-        }
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
+        h1 { color: #003366; }
+        select { padding: 8px; font-size: 14px; margin-bottom: 20px; }
+        .dashboard { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
+        .card { background: white; padding: 15px; border-radius: 8px; width: 220px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+        .card h3 { margin-top: 0; color: #003366; }
+        #prodPlot { background: white; border-radius: 8px; padding: 10px; }
+        #errorBox { display: none; background: #ffe5e5; color: #990000; border: 1px solid #cc0000; padding: 12px; border-radius: 6px; margin-bottom: 20px; }
     </style>
 </head>
 
@@ -59,41 +25,18 @@
 
 <h1>Volve Field Water Analysis</h1>
 
+<div id="errorBox"></div>
+
 <label><b>Select Well:</b></label>
 <select id="wellSelector"></select>
 
 <div class="dashboard">
-
-    <div class="card">
-        <h3>Well</h3>
-        <p id="wellName">Loading...</p>
-    </div>
-
-    <div class="card">
-        <h3>Peak Water</h3>
-        <p id="peakWater">-</p>
-    </div>
-
-    <div class="card">
-        <h3>Current Water</h3>
-        <p id="currentWater">-</p>
-    </div>
-
-    <div class="card">
-        <h3>Cumulative Water</h3>
-        <p id="cumWater">-</p>
-    </div>
-
-    <div class="card">
-        <h3>Current Water Cut</h3>
-        <p id="currentWaterCut">-</p>
-    </div>
-
-    <div class="card">
-        <h3>Field Water</h3>
-        <p id="fieldWater">-</p>
-    </div>
-
+    <div class="card"><h3>Well</h3><p id="wellName">Loading...</p></div>
+    <div class="card"><h3>Peak Water</h3><p id="peakWater">-</p></div>
+    <div class="card"><h3>Current Water</h3><p id="currentWater">-</p></div>
+    <div class="card"><h3>Cumulative Water</h3><p id="cumWater">-</p></div>
+    <div class="card"><h3>Current Water Cut</h3><p id="currentWaterCut">-</p></div>
+    <div class="card"><h3>Field Water</h3><p id="fieldWater">-</p></div>
 </div>
 
 <div id="prodPlot"></div>
@@ -103,155 +46,146 @@ const SM3_TO_BBL = 6.2898;
 
 let allRows = [];
 
-Papa.parse("volvedatacsv.csv", {
-    download: true,
-    header: true,
-    complete: function(results) {
-        allRows = results.data.filter(
-            row => row.NPD_WELL_BORE_NAME && row.DATEPRD
-        );
-
-        const wells = [
-            ...new Set(
-                allRows.map(
-                    r => r.NPD_WELL_BORE_NAME
-                )
-            )
-        ].sort();
-
-        const selector = document.getElementById("wellSelector");
-        selector.innerHTML = "";
-
-        wells.forEach(well => {
-            const option = document.createElement("option");
-            option.value = well;
-            option.text = well;
-            selector.appendChild(option);
-        });
-
-        calculateFieldKPIs();
-
-        selector.addEventListener("change", function() {
-            updateWell(this.value);
-        });
-
-        if(wells.length > 0){
-            // FIXED: Pass the first well string, not the entire array
-            updateWell(wells[0]);
-        }
-    }
-});
-
-function calculateFieldKPIs(){
-    const sortedDates = allRows
-        .map(r => r.DATEPRD)
-        .filter(Boolean)
-        .sort();
-
-    if (sortedDates.length === 0) return;
-
-    const latestDate = sortedDates[sortedDates.length - 1];
-
-    const latestRows = allRows.filter(
-        r => r.DATEPRD === latestDate
-    );
-
-    const fieldWater = latestRows.reduce(
-        (sum, r) => sum + ((Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL),
-        0
-    );
-
-    document.getElementById("fieldWater").innerText =
-        fieldWater.toFixed(0) + " BWPD";
+function showError(msg) {
+    const box = document.getElementById("errorBox");
+    box.style.display = "block";
+    box.innerText = msg;
+    document.getElementById("wellName").innerText = "Error";
 }
 
-function updateWell(wellName){
-    const wellData = allRows.filter(
-        r => r.NPD_WELL_BORE_NAME === wellName
+// Safe date parser: handles 07-Apr-14, 2014-04-07, 4/7/2014, etc.
+const MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function toTime(d) {
+    if (!d) return 0;
+    const s = String(d).trim();
+    let m = s.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3})[A-Za-z]*[-\/ ](\d{2,4})/);
+    if (m) {
+        let y = Number(m[3]);
+        if (y < 100) y += (y > 50 ? 1900 : 2000);
+        return new Date(y, MONTHS[m[2].toLowerCase()], Number(m[1])).getTime();
+    }
+    const t = new Date(s).getTime();
+    return isNaN(t) ? 0 : t;
+}
+
+if (typeof Papa === "undefined" || typeof Plotly === "undefined") {
+    showError("Libraries failed to load (Papa: " + (typeof Papa) + ", Plotly: " + (typeof Plotly) + ").");
+} else {
+    Papa.parse("volvedatacsv.csv", {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+
+        complete: function(results) {
+            // Same filter as your working page: well name only
+            allRows = results.data.filter(row => row.NPD_WELL_BORE_NAME);
+
+            if (allRows.length === 0) {
+                const cols = results.meta && results.meta.fields ? results.meta.fields.join(", ") : "none";
+                showError("No rows with NPD_WELL_BORE_NAME. Columns found: " + cols);
+                return;
+            }
+
+            const wells = [...new Set(allRows.map(r => r.NPD_WELL_BORE_NAME))].sort();
+
+            const selector = document.getElementById("wellSelector");
+            selector.innerHTML = "";
+
+            wells.forEach(well => {
+                const option = document.createElement("option");
+                option.value = well;
+                option.text = well;
+                selector.appendChild(option);
+            });
+
+            try { calculateFieldKPIs(); } catch (e) { console.error(e); }
+
+            selector.addEventListener("change", function() {
+                updateWell(this.value);
+            });
+
+            updateWell(wells[0]);
+        },
+
+        error: function(err) {
+            showError("Could not load volvedatacsv.csv: " + err);
+        }
+    });
+}
+
+function calculateFieldKPIs() {
+    let latest = 0;
+    allRows.forEach(r => {
+        const t = toTime(r.DATEPRD);
+        if (t > latest) latest = t;
+    });
+
+    const latestRows = allRows.filter(r => toTime(r.DATEPRD) === latest);
+
+    const fieldWater = latestRows.reduce(
+        (sum, r) => sum + ((Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL), 0
     );
 
-    if(wellData.length === 0){
-        return;
+    document.getElementById("fieldWater").innerText = fieldWater.toFixed(0) + " BWPD";
+}
+
+function updateWell(wellName) {
+    let wellData = allRows.filter(r => r.NPD_WELL_BORE_NAME === wellName);
+    if (wellData.length === 0) return;
+
+    // Sort by date only if every date was parsed successfully; otherwise keep CSV order
+    if (wellData.every(r => toTime(r.DATEPRD) > 0)) {
+        wellData = wellData.slice().sort((a, b) => toTime(a.DATEPRD) - toTime(b.DATEPRD));
     }
 
     const dates = wellData.map(r => r.DATEPRD);
-    
-    const water = wellData.map(
-        r => (Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL
-    );
+    const water = wellData.map(r => (Number(r.BORE_WAT_VOL) || 0) * SM3_TO_BBL);
 
-    const oil = wellData.map(
-        r => (Number(r.BORE_OIL_VOL) || 0) * SM3_TO_BBL
-    );
-
-    // Calculate Water Cut (%) -> Water / (Oil + Water)
     const waterCut = wellData.map(r => {
-        const w = (Number(r.BORE_WAT_VOL) || 0);
-        const o = (Number(r.BORE_OIL_VOL) || 0);
+        const w = Number(r.BORE_WAT_VOL) || 0;
+        const o = Number(r.BORE_OIL_VOL) || 0;
         return (o + w) > 0 ? (w / (o + w)) * 100 : 0;
     });
 
-    // Calculate Cumulative Water Production (Total bbls)
-    const totalWater = water.reduce((sum, val) => sum + val, 0);
+    const totalWater = water.reduce((s, v) => s + v, 0);
 
-    // Find Max Water safely
     let maxWater = 0;
     for (let i = 0; i < water.length; i++) {
         if (water[i] > maxWater) maxWater = water[i];
     }
 
     document.getElementById("wellName").innerText = wellName;
-
-    document.getElementById("peakWater").innerText =
-        maxWater.toFixed(0) + " BWPD";
-
-    document.getElementById("currentWater").innerText =
-        water[water.length - 1].toFixed(0) + " BWPD";
-
-    document.getElementById("cumWater").innerText =
-        (totalWater / 1000000).toFixed(2) + " MM bbls";
-
-    document.getElementById("currentWaterCut").innerText =
-        waterCut[waterCut.length - 1].toFixed(1) + " %";
+    document.getElementById("peakWater").innerText = maxWater.toFixed(0) + " BWPD";
+    document.getElementById("currentWater").innerText = water[water.length - 1].toFixed(0) + " BWPD";
+    document.getElementById("cumWater").innerText = (totalWater / 1000000).toFixed(2) + " MM bbls";
+    document.getElementById("currentWaterCut").innerText = waterCut[waterCut.length - 1].toFixed(1) + " %";
 
     const waterRateTrace = {
-        x: dates,
-        y: water,
+        x: dates, y: water,
         name: "Water Rate (BWPD)",
-        type: 'scatter',
+        type: "scatter",
         line: { color: "blue", width: 2 }
     };
 
     const waterCutTrace = {
-        x: dates,
-        y: waterCut,
+        x: dates, y: waterCut,
         name: "Water Cut (%)",
-        type: 'scatter',
+        type: "scatter",
         yaxis: "y2",
         line: { color: "lightblue", width: 2, dash: "dash" }
     };
 
-    Plotly.newPlot(
-        "prodPlot",
-        [waterRateTrace, waterCutTrace],
-        {
-            title: wellName + " Water Production Diagnostics",
-            hovermode: "x unified",
-            yaxis: {
-                title: "Water Production Rate (BWPD)",
-                titlefont: { color: "blue" },
-                tickfont: { color: "blue" }
-            },
-            yaxis2: {
-                title: "Water Cut (%)",
-                titlefont: { color: "darkblue" },
-                tickfont: { color: "darkblue" },
-                overlaying: "y",
-                side: "right",
-                range: [0, 100] // FIXED: Added complete range parameters
-            }
+    Plotly.newPlot("prodPlot", [waterRateTrace, waterCutTrace], {
+        title: wellName + " Water Production Diagnostics",
+        hovermode: "x unified",
+        yaxis: { title: "Water Production Rate (BWPD)" },
+        yaxis2: {
+            title: "Water Cut (%)",
+            overlaying: "y",
+            side: "right",
+            range: [0, 100]
         }
-    );
+    });
 }
 </script>
 
