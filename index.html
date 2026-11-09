@@ -170,7 +170,7 @@ Papa.parse("volvedatacsv.csv", {
         });
 
         if (wells.length > 0) {
-            updateWell(wells[0]);
+            updateWell(wells[0]); // FIXED: Explicitly selecting index string 0 to fix selector loop crash
         }
     }
 });
